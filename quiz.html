@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Norys Quiz</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.cdnfonts.com/css/hagrid-trial"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="quiz.css" />
+  </head>
+  <body>
+    <div class="quiz-top-stack">
+      <header class="site-header">
+        <div class="container header-shell">
+          <div class="quiz-header-top">
+            <a class="brand" href="index.html" aria-label="Norys Startseite">
+              <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
+              <span class="brand__name">Norys</span>
+            </a>
+
+            <button class="lang-pill" type="button" aria-label="Sprache wählen">
+              <i class="fa-solid fa-globe" aria-hidden="true"></i>
+              <span>Deutsch</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="quiz-subnav" aria-label="Quiz Navigation">
+        <div class="container quiz-subnav__inner">
+          <button class="header-btn" id="backBtn" type="button" aria-label="Zurück zur vorherigen Frage">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+          </button>
+          <div class="quiz-counter" id="progressText" aria-live="polite">1/12</div>
+        </div>
+      </div>
+    </div>
+
+    <main class="quiz-app">
+      <section class="quiz-panel" aria-label="Quiz">
+        <div class="quiz-question-hero">
+          <p class="quiz-question" id="questionText"></p>
+        </div>
+
+        <div class="quiz-answers" id="answersContainer" role="group" aria-label="Antwortoptionen"></div>
+      </section>
+
+      <div class="quiz-utilities">
+        <a class="cta quiz-reset-cta" id="resetBtn" href="quiz.html">
+          Neu starten
+          <span class="cta__arrow" aria-hidden="true">
+            <i class="fa-solid fa-rotate-right"></i>
+          </span>
+        </a>
+      </div>
+
+
+      <p class="sr-only" id="liveRegion" aria-live="polite"></p>
+    </main>
+
+    <script src="profile-engine.js"></script>
+    <script src="quiz.js"></script>
+    <script src="assets/script.js"></script>
+  </body>
+</html>

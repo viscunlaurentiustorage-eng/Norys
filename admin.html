@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Norys Admin Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/admin.css" />
+  </head>
+  <body>
+    <div class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <p class="eyebrow">Analytics Console</p>
+          <h1>Norys Activity Dashboard</h1>
+          <p class="subtitle">Tracks index page visits, interactions, session quality, and trends in near real time.</p>
+        </div>
+        <div class="header-actions">
+          <label>
+            Admin token
+            <input id="tokenInput" type="password" placeholder="Enter ADMIN_TOKEN" autocomplete="off" />
+          </label>
+          <button id="saveTokenBtn" type="button">Connect</button>
+        </div>
+      </header>
+
+      <section class="filters">
+        <label>
+          From
+          <input id="fromInput" type="datetime-local" />
+        </label>
+        <label>
+          To
+          <input id="toInput" type="datetime-local" />
+        </label>
+        <label>
+          Interval
+          <select id="intervalSelect">
+            <option value="day">Daily</option>
+            <option value="hour">Hourly</option>
+          </select>
+        </label>
+        <button id="applyFiltersBtn" type="button">Apply Filters</button>
+        <button id="refreshNowBtn" type="button">Refresh</button>
+      </section>
+
+      <section class="summary-grid" id="summaryGrid">
+        <article class="metric-card"><h2>Total Visits</h2><p id="metricVisits">-</p></article>
+        <article class="metric-card"><h2>Unique Visitors</h2><p id="metricVisitors">-</p></article>
+        <article class="metric-card"><h2>Total Clicks</h2><p id="metricClicks">-</p></article>
+        <article class="metric-card"><h2>Avg Time on Page</h2><p id="metricAvgTime">-</p></article>
+        <article class="metric-card"><h2>Bounce Rate</h2><p id="metricBounce">-</p></article>
+        <article class="metric-card"><h2>Quick Exits</h2><p id="metricQuickExits">-</p></article>
+      </section>
+
+      <section class="charts-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Visits Trend</h2>
+            <p id="visitsRangeLabel"></p>
+          </div>
+          <div id="visitsTrendChart" class="bar-chart"></div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Clicks Trend</h2>
+            <p id="clicksRangeLabel"></p>
+          </div>
+          <div id="clicksTrendChart" class="bar-chart"></div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Top Interactive Elements</h2>
+          <p>Most clicked items in selected range</p>
+        </div>
+        <div id="elementsChart" class="horizontal-bars"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Detailed Activity Log</h2>
+          <p>Latest events (page views, clicks, scroll milestones, session end)</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Path</th>
+                <th>Element</th>
+                <th>Session</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <script src="assets/admin.js"></script>
+  </body>
+</html>

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dein Ergebnis | Norys</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.cdnfonts.com/css/hagrid-trial" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="result.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-shell">
+        <a class="brand" href="index.html" aria-label="Norys Startseite">
+          <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
+          <span class="brand__name">Norys</span>
+        </a>
+
+        <button class="lang-pill" type="button" aria-label="Sprache wählen">
+          <i class="fa-solid fa-globe" aria-hidden="true"></i>
+          <span>Deutsch</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="result-page">
+      <section class="result-shell is-hidden" id="resultShell">
+        <section class="result-hero">
+          <div class="result-hero__copy">
+            <h1 class="result-hero__title" id="resultTitle"></h1>
+            <p class="result-hero__summary" id="resultSummary"></p>
+          </div>
+        </section>
+
+        <section class="path-card">
+          <h2 class="path-card__title">Dein Verbesserungsweg</h2>
+          <div class="path-card__grid" id="improvementPath"></div>
+          <p class="path-card__note" id="pathNote">Genau diese drei Schritte setzt das passende E-Book gemeinsam mit dir um.</p>
+        </section>
+
+        <section class="insights-card animate-on-scroll">
+          <div class="insights-card__intro">
+            <h2 class="insights-card__title">So zeigt sich dieses Beziehungsmuster meist im Alltag.</h2>
+          </div>
+          <div class="insights-card__surface" id="microInsights"></div>
+        </section>
+
+        <section class="program-card animate-on-scroll" id="programSection">
+          <div class="program-card__layout">
+            <div class="program-card__copy-wrap">
+              <h2 class="program-card__title" id="programTitle">Das passende E-Book fuer dich</h2>
+              <p class="program-card__copy" id="programCopy">Dieses E-Book uebersetzt dein Ergebnis in konkrete Schritte fuer deinen Beziehungsalltag.</p>
+            </div>
+
+            <div class="program-card__surface">
+              <div class="program-card__list" id="programList"></div>
+
+              <div class="program-card__actions">
+                <a class="cta" id="resultCta" href="#">Zum passenden E-Book</a>
+                <p class="program-card__subtext" id="programSubtext">Klar geschrieben, direkt anwendbar, ohne unnoetige Theorie.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="proof-card animate-on-scroll">
+          <div class="proof-card__panel">
+            <div class="proof-card__lead">
+              <h2 class="proof-card__title" id="proofTitle">Warum genau dieses E-Book fuer dich passt.</h2>
+              <p class="proof-card__copy" id="proofCopy">Es ist nicht fuer alle gleichzeitig geschrieben, sondern fuer genau das Muster, das dein Ergebnis zeigt.</p>
+            </div>
+
+            <div class="proof-card__trust-wrap">
+              <div class="proof-card__trust">
+                <span class="proof-card__trust-icon" aria-hidden="true">
+                  <i class="fa-solid fa-shield-heart"></i>
+                </span>
+                <div class="proof-card__trust-copy">
+                  <span class="proof-card__stat-number" id="proofStatNumber">4 E-Books</span>
+                  <span class="proof-card__stat-copy" id="proofStatCopy">aber fuer dein aktuelles Beziehungsmuster ist vor allem dieses eine relevant.</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      </section>
+
+      <section class="fallback-card is-hidden" id="fallbackCard">
+        <p class="fallback-card__eyebrow">Ergebnis fehlt</p>
+        <h1 class="fallback-card__title">Dein Ergebnis konnte nicht geladen werden.</h1>
+        <p class="fallback-card__text">Starte den Test erneut, damit wir dir deine Auswertung anzeigen koennen.</p>
+        <a class="cta fallback-card__cta" href="quiz.html">
+          Test erneut starten
+          <span class="cta__arrow" aria-hidden="true">
+            <i class="fa-solid fa-arrow-right-long"></i>
+          </span>
+        </a>
+      </section>
+    </main>
+
+    <script src="profile-engine.js"></script>
+    <script src="result.js"></script>
+  </body>
+</html>

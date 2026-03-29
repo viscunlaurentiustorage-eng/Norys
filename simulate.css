@@ -1,0 +1,118 @@
+:root {
+  --bg: #fbf3ea;
+  --panel: #ffffff;
+  --text: #111;
+  --muted: rgba(17, 17, 17, 0.68);
+  --accent: #ef7a2f;
+  --accent-dark: #e36f26;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Montserrat", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.simulate-page {
+  width: min(920px, calc(100% - 24px));
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.simulate-card {
+  width: 100%;
+  background: var(--panel);
+  border-radius: 20px;
+  border: 1px solid rgba(17, 17, 17, 0.08);
+  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.08);
+  padding: 28px 24px;
+}
+
+.simulate-card__eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.simulate-card__title {
+  margin: 10px 0 0;
+  font-family: "Hagrid Trial", "Montserrat", sans-serif;
+  font-weight: 500;
+  line-height: 1.05;
+  font-size: clamp(1.6rem, 5vw, 3rem);
+}
+
+.simulate-card__subtitle {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.simulate-progress {
+  margin-top: 26px;
+  height: 14px;
+  background: #f0e4d9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.simulate-progress__fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+  transition: width 260ms ease;
+}
+
+.simulate-meta {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simulate-percent {
+  margin: 0;
+  font-weight: 700;
+  color: #703610;
+}
+
+.simulate-step {
+  margin: 0;
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+@media (min-width: 768px) {
+  .simulate-page {
+    width: min(1040px, calc(100% - 40px));
+  }
+
+  .simulate-card {
+    padding: 38px 40px;
+  }
+
+  .simulate-progress {
+    height: 16px;
+  }
+}
