@@ -381,7 +381,8 @@ function initCheckout() {
       }
 
       if (!response.ok || !data.url) {
-        throw new Error(data.error || "Checkout konnte nicht gestartet werden.");
+        const fallbackMessage = `Checkout konnte nicht gestartet werden (HTTP ${response.status}).`;
+        throw new Error(data.error || fallbackMessage);
       }
 
       window.location.assign(data.url);

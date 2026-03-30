@@ -139,6 +139,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
 
     response.json({ url: session.url });
   } catch (error) {
+    console.error("Stripe checkout session failed:", error);
     response.status(500).json({
       error: error instanceof Error ? error.message : "Stripe session could not be created.",
     });
@@ -172,6 +173,7 @@ app.get("/api/checkout-session", async (request, response) => {
       downloadUrl: session.payment_status === "paid" ? `/api/download-ebook?session_id=${encodeURIComponent(sessionId)}` : "",
     });
   } catch (error) {
+    console.error("Stripe checkout session fetch failed:", error);
     response.status(500).json({
       error: error instanceof Error ? error.message : "Session could not be retrieved.",
     });
@@ -214,6 +216,7 @@ app.get("/api/download-ebook", async (request, response) => {
 
     response.download(ebookPath, product.fileName);
   } catch (error) {
+    console.error("Stripe ebook download failed:", error);
     response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
   }
 });
