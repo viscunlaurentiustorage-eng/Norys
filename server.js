@@ -45,6 +45,41 @@ const PRODUCTS = {
 app.use(express.json());
 app.use(express.static(__dirname));
 
+function normalizeBaseUrl(value) {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
+
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+function getPublicBaseUrl(request) {
+  const envBaseUrl = normalizeBaseUrl(baseUrl);
+  if (envBaseUrl) {
+    return envBaseUrl;
+  }
+
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  const forwardedHost = request.headers["x-forwarded-host"] || request.headers.host;
+  const protocol = typeof forwardedProto === "string" && forwardedProto ? forwardedProto.split(",")[0] : request.protocol;
+  const host = typeof forwardedHost === "string" ? forwardedHost.split(",")[0].trim() : "";
+
+  if (!host) {
+    return `http://localhost:${port}`;
+  }
+
+  return `${protocol || "https"}://${host}`.replace(/\/+$/, "");
+}
+
 app.get("/api/stripe-config", (_request, response) => {
   response.json({
     publishableKey: stripePublishableKey,
@@ -69,7 +104,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
       return;
     }
 
-    const origin = request.body?.origin || baseUrl;
+    const publicBaseUrl = getPublicBaseUrl(request);
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -89,8 +124,8 @@ app.post("/api/create-checkout-session", async (request, response) => {
       metadata: {
         resultType,
       },
-      success_url: `${origin}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/result.html`,
+      success_url: `${publicBaseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${publicBaseUrl}/result.html`,
     });
 
     response.json({ url: session.url });
@@ -175,5 +210,5 @@ app.get("/api/download-ebook", async (request, response) => {
 });
 
 app.listen(port, () => {
-  console.log(`Norys server running on ${baseUrl}`);
+  console.log(`Norys server running on ${normalizeBaseUrl(baseUrl) || `http://localhost:${port}`}`);
 });
