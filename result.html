@@ -35,82 +35,125 @@
     </header>
 
     <main class="result-page">
-      <section class="result-shell is-hidden" id="resultShell">
-        <section class="result-hero">
-          <div class="result-hero__copy">
-            <h1 class="result-hero__title" id="resultTitle"></h1>
-            <p class="result-hero__summary" id="resultSummary"></p>
-          </div>
-        </section>
-
-        <section class="path-card">
-          <h2 class="path-card__title">Dein Verbesserungsweg</h2>
-          <div class="path-card__grid" id="improvementPath"></div>
-          <p class="path-card__note" id="pathNote">Genau diese drei Schritte setzt das passende E-Book gemeinsam mit dir um.</p>
-        </section>
-
-        <section class="insights-card animate-on-scroll">
-          <div class="insights-card__intro">
-            <h2 class="insights-card__title">So zeigt sich dieses Beziehungsmuster meist im Alltag.</h2>
-          </div>
-          <div class="insights-card__surface" id="microInsights"></div>
-        </section>
-
-        <section class="program-card animate-on-scroll" id="programSection">
-          <div class="program-card__layout">
-            <div class="program-card__copy-wrap">
-              <h2 class="program-card__title" id="programTitle">Das passende E-Book fuer dich</h2>
-              <p class="program-card__copy" id="programCopy">Dieses E-Book uebersetzt dein Ergebnis in konkrete Schritte fuer deinen Beziehungsalltag.</p>
-            </div>
-
-            <div class="program-card__surface">
-              <div class="program-card__list" id="programList"></div>
-
-              <div class="program-card__actions">
-                <a class="cta" id="resultCta" href="#">Zum passenden E-Book</a>
-                <p class="program-card__subtext" id="programSubtext">Klar geschrieben, direkt anwendbar, ohne unnoetige Theorie.</p>
-              </div>
+      <section class="result-hero animate-on-scroll">
+        <div class="container">
+          <div class="result-shell result-shell--hero">
+            <div class="result-hero__content">
+              <h1 class="result-hero__title">Du bist die <span id="resultTypeName">Ueberdenkerin</span></h1>
+              <p class="result-hero__subtitle" id="resultHeroSubtitle">
+                Du willst Sicherheit und Klarheit, geraetst dabei aber oft in inneren Druck.
+              </p>
             </div>
           </div>
-        </section>
-
-        <section class="proof-card animate-on-scroll">
-          <div class="proof-card__panel">
-            <div class="proof-card__lead">
-              <h2 class="proof-card__title" id="proofTitle">Warum genau dieses E-Book fuer dich passt.</h2>
-              <p class="proof-card__copy" id="proofCopy">Es ist nicht fuer alle gleichzeitig geschrieben, sondern fuer genau das Muster, das dein Ergebnis zeigt.</p>
-            </div>
-
-            <div class="proof-card__trust-wrap">
-              <div class="proof-card__trust">
-                <span class="proof-card__trust-icon" aria-hidden="true">
-                  <i class="fa-solid fa-shield-heart"></i>
-                </span>
-                <div class="proof-card__trust-copy">
-                  <span class="proof-card__stat-number" id="proofStatNumber">4 E-Books</span>
-                  <span class="proof-card__stat-copy" id="proofStatCopy">aber fuer dein aktuelles Beziehungsmuster ist vor allem dieses eine relevant.</span>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </section>
+        </div>
       </section>
 
-      <section class="fallback-card is-hidden" id="fallbackCard">
-        <p class="fallback-card__eyebrow">Ergebnis fehlt</p>
-        <h1 class="fallback-card__title">Dein Ergebnis konnte nicht geladen werden.</h1>
-        <p class="fallback-card__text">Starte den Test erneut, damit wir dir deine Auswertung anzeigen koennen.</p>
-        <a class="cta fallback-card__cta" href="quiz.html">
-          Test erneut starten
-          <span class="cta__arrow" aria-hidden="true">
-            <i class="fa-solid fa-arrow-right-long"></i>
-          </span>
-        </a>
+      <section class="result-section animate-on-scroll">
+        <div class="container">
+          <div class="result-shell result-shell--copy">
+            <div class="section-heading">
+              <h2 class="section-heading__title">Das erkennst du wahrscheinlich sofort wieder</h2>
+            </div>
+            <ul class="result-list" id="identityList"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section animate-on-scroll">
+        <div class="container">
+          <article class="result-shell result-card result-shell--copy">
+            <div class="section-heading section-heading--compact">
+              <h2 class="section-heading__title">Genau dieses Muster schafft oft mehr Distanz</h2>
+            </div>
+            <ul class="result-list result-list--tight" id="problemList"></ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="result-section animate-on-scroll">
+        <div class="container">
+          <div class="result-shell">
+            <div class="section-heading">
+              <h2 class="section-heading__title">Zwei Wege ab hier</h2>
+            </div>
+
+            <div class="future-stack">
+              <article class="result-card future-card future-card--stack" style="--stack-index: 1;">
+                <div class="future-card__head">
+                  <h3 class="future-card__title">Wenn nichts sich aendert</h3>
+                  <span class="future-card__icon" aria-hidden="true">
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                  </span>
+                </div>
+                <ul class="result-list result-list--tight future-card__list" id="futureRiskList"></ul>
+              </article>
+
+              <article class="result-card future-card future-card--stack" style="--stack-index: 2;">
+                <div class="future-card__head">
+                  <h3 class="future-card__title">Wenn du das Muster veraenderst</h3>
+                  <span class="future-card__icon" aria-hidden="true">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                  </span>
+                </div>
+                <ul class="result-list result-list--tight future-card__list" id="futureGainList"></ul>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section animate-on-scroll" id="offerSection">
+        <article class="offer-card offer-card--free">
+          <div class="container">
+            <div class="result-shell">
+            <div class="offer-card__copy">
+              <h2 class="section-heading__title" id="ebookTitle">Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe</h2>
+              <p class="offer-card__text" id="offerDescription">
+                Dieses eBook zeigt dir, warum dein Muster entsteht und wie du es im Alltag konkret veraenderst.
+              </p>
+            </div>
+
+            <ul class="offer-benefits" id="offerOutcomeList"></ul>
+
+            <div class="offer-action">
+              <div class="pricing-inline">
+                <p class="pricing-inline__old">Statt <span id="oldPrice">29,90 EUR</span></p>
+                <p class="pricing-inline__new"><span id="newPrice">14,90 EUR</span></p>
+                <p class="pricing-inline__hint">Nur passend zu deinem aktuellen Ergebnis freigeschaltet</p>
+              </div>
+
+              <a class="cta" href="#" id="offerCheckoutBtn">
+                Zeig mir den Weg raus
+                <span class="cta__arrow" aria-hidden="true">
+                  <i class="fa-solid fa-arrow-right-long"></i>
+                </span>
+              </a>
+            </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="result-section result-section--testimonials animate-on-scroll">
+        <div class="testimonials-block">
+          <div class="container">
+            <div class="result-shell">
+              <div class="section-heading section-heading--testimonials">
+                <h2 class="section-heading__title">Das sagen Frauen nach ihrem Aha-Moment</h2>
+              </div>
+            </div>
+          </div>
+          <section class="testimonials" id="testimonials">
+            <div class="testimonials__viewport">
+              <div class="testimonials__row testimonials__row--top" id="testimonialsRowTop"></div>
+              <div class="testimonials__row testimonials__row--bottom" id="testimonialsRowBottom"></div>
+            </div>
+          </section>
+        </div>
       </section>
     </main>
 
-    <script src="profile-engine.js"></script>
     <script src="result.js"></script>
+    <script src="assets/script.js"></script>
   </body>
 </html>

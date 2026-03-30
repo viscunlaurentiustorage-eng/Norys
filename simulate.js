@@ -1,37 +1,14 @@
 const steps = [
-  { until: 24, label: "Antwortmuster werden ausgewertet..." },
-  { until: 52, label: "Beziehungsdynamiken werden abgeglichen..." },
-  { until: 80, label: "Persoenliche Schwerpunkte werden priorisiert..." },
-  { until: 100, label: "Dein Ergebnis wird vorbereitet..." },
+  { until: 24, label: "Antworten werden verarbeitet..." },
+  { until: 52, label: "Seite wird vorbereitet..." },
+  { until: 80, label: "Inhalte werden geladen..." },
+  { until: 100, label: "Weiterleitung erfolgt..." },
 ];
-
-const LEGACY_TYPE_MAP = {
-  A: "emotional_initiating",
-  B: "overthinking",
-  C: "conflict_avoidance",
-  D: "over_adapting",
-};
-
-const VALID_TRAITS = new Set([
-  "overthinking",
-  "conflict_avoidance",
-  "emotional_initiating",
-  "over_adapting",
-]);
 
 const progressFill = document.getElementById("progressFill");
 const progressPercent = document.getElementById("progressPercent");
 const progressStep = document.getElementById("progressStep");
 const progressRoot = document.querySelector(".simulate-progress");
-
-const params = new URLSearchParams(window.location.search);
-const legacyType = (params.get("type") || "").trim().toUpperCase();
-const primary = normalizeTrait(params.get("primary")) || LEGACY_TYPE_MAP[legacyType] || null;
-const secondary = normalizeTrait(params.get("secondary"));
-
-if (!primary) {
-  window.location.replace("quiz.html");
-}
 
 let value = 0;
 let intervalId = null;
@@ -39,11 +16,6 @@ let isHoldingAtNinetyNine = false;
 
 paint();
 intervalId = setInterval(tick, 90);
-
-function normalizeTrait(value) {
-  const normalized = (value || "").trim().toLowerCase();
-  return VALID_TRAITS.has(normalized) ? normalized : null;
-}
 
 function getStepLabel(percent) {
   const step = steps.find((item) => percent <= item.until);
@@ -62,13 +34,8 @@ function paint() {
 
 function finish() {
   clearInterval(intervalId);
-  const nextParams = new URLSearchParams({ primary });
-  if (secondary) {
-    nextParams.set("secondary", secondary);
-  }
-
   setTimeout(() => {
-    window.location.replace(`result.html?${nextParams.toString()}`);
+    window.location.replace("result.html");
   }, 420);
 }
 

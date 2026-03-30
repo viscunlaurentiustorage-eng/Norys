@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zahlung bestaetigt | Norys</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.cdnfonts.com/css/hagrid-trial" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <style>
+      body { background: var(--bg); }
+      .success-page {
+        min-height: 100vh;
+        padding: 118px 0 64px;
+        display: flex;
+        align-items: center;
+      }
+      .success-card {
+        width: min(760px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 32px;
+        border-radius: 24px;
+        background: #f7e9dc;
+        border: 1px solid rgba(17, 17, 17, 0.08);
+        display: grid;
+        gap: 18px;
+      }
+      .success-title {
+        margin: 0;
+        font-family: "Hagrid Trial", "Montserrat", sans-serif;
+        font-size: clamp(2rem, 6vw, 3.3rem);
+        line-height: 1.05;
+      }
+      .success-copy,
+      .success-status {
+        margin: 0;
+        line-height: 1.6;
+        color: rgba(17, 17, 17, 0.74);
+      }
+      .success-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .success-link {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-shell">
+        <a class="brand" href="index.html" aria-label="Norys Startseite">
+          <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
+          <span class="brand__name">Norys</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="success-page">
+      <section class="success-card">
+        <h1 class="success-title">Deine Zahlung wurde bestaetigt.</h1>
+        <p class="success-copy" id="successCopy">Wir pruefen gerade deine Bestellung und bereiten dein eBook vor.</p>
+        <p class="success-status" id="successStatus">Einen Moment bitte...</p>
+        <div class="success-actions" id="successActions"></div>
+      </section>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get("session_id");
+      const successCopy = document.getElementById("successCopy");
+      const successStatus = document.getElementById("successStatus");
+      const successActions = document.getElementById("successActions");
+
+      if (!sessionId) {
+        successStatus.textContent = "Die Stripe Session fehlt. Bitte gehe zur Ergebnisseite zurueck und starte den Kauf erneut.";
+      } else {
+        fetch(`/api/checkout-session?session_id=${encodeURIComponent(sessionId)}`)
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.error) {
+              throw new Error(data.error);
+            }
+
+            if (data.paymentStatus !== "paid") {
+              successStatus.textContent = "Deine Zahlung ist noch nicht bestaetigt. Bitte aktualisiere die Seite in einem Moment erneut.";
+              return;
+            }
+
+            successCopy.textContent = data.productName
+              ? `Dein Kauf fuer "${data.productName}" ist erfolgreich abgeschlossen.`
+              : "Dein Kauf ist erfolgreich abgeschlossen.";
+            successStatus.textContent = "Dein eBook steht jetzt zum Download bereit.";
+            successActions.innerHTML = `
+              <a class="cta" href="${data.downloadUrl}">
+                eBook herunterladen
+                <span class="cta__arrow" aria-hidden="true">
+                  <i class="fa-solid fa-arrow-right-long"></i>
+                </span>
+              </a>
+              <a class="success-link" href="result.html">Zurueck zur Ergebnisseite</a>
+            `;
+          })
+          .catch((error) => {
+            successStatus.textContent = error.message || "Es ist ein Fehler beim Abrufen deiner Bestellung aufgetreten.";
+          });
+      }
+    </script>
+  </body>
+</html>

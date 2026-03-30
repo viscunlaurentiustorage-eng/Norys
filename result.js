@@ -1,453 +1,383 @@
-const {
-  STORAGE_KEY,
-  TRAITS,
-  buildFallbackProfile,
-  normalizeTraitId,
-} = window.NorysProfileEngine;
+const RESULT_STORAGE_KEY = "norysResult";
 
-const EBOOK_URLS = {
-  overthinking: "https://checkout.example.com/ebook-overthinking",
-  conflict_avoidance: "https://checkout.example.com/ebook-conflict-avoidance",
-  emotional_initiating: "https://checkout.example.com/ebook-emotional-initiating",
-  over_adapting: "https://checkout.example.com/ebook-over-adapting",
-};
-
-const LEGACY_TYPE_MAP = {
-  A: "emotional_initiating",
-  B: "overthinking",
-  C: "conflict_avoidance",
-  D: "over_adapting",
-};
-
-const RESULT_COPY = {
-  overthinking: {
-    ebookName: "Das E-Book fuer Die Grueblerin",
-    summaryLead:
-      "Deine Antworten zeigen vor allem ein Muster von innerem Pruefen, Deuten und gedanklichem Weiterarbeiten, sobald in der Beziehung etwas unklar wirkt.",
-    path: [
+const RESULT_CONTENT = {
+  overthinker: {
+    typeName: "Ueberdenkerin",
+    heroSubtitle: "Du willst Sicherheit und Klarheit, geraetst dabei aber oft in inneren Druck.",
+    identity: [
+      "Du liest zwischen den Zeilen und suchst schnell nach Bedeutung.",
+      "Nach Distanz oder Streit denkst du lange weiter.",
+      "Du willst Klarheit, bevor Unsicherheit zu gross wird.",
+    ],
+    problems: [
+      "Du reagierst auf Unsicherheit, bevor echte Klarheit da ist.",
+      "Dadurch entstehen Druck, Missverstaendnisse und innere Anspannung.",
+      "Was Naehe schuetzen soll, belastet sie manchmal unbemerkt.",
+    ],
+    futureRisk: [
+      "Du gruebelst weiter ueber kleine Signale.",
+      "Gespraeche drehen sich im Kreis.",
+      "Naehe fuehlt sich anstrengend an.",
+    ],
+    futureGain: [
+      "Du reagierst ruhiger und klarer.",
+      "Du sprichst Unsicherheit frueher und besser an.",
+      "Naehe fuehlt sich wieder sicherer an.",
+    ],
+    ebookTitle: "Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe",
+    offerDescription:
+      "Dieses eBook zeigt dir, warum dein Muster entsteht und wie du es im Alltag konkret veraenderst. Klar, praktisch und genau auf deinen Typ abgestimmt.",
+    outcomes: [
+      "Du erkennst deine Trigger frueher.",
+      "Du lernst, klarer statt angespannter zu reagieren.",
+      "Du baust mehr Ruhe und Verbindung in deiner Beziehung auf.",
+    ],
+    testimonials: [
       {
-        title: "Gedankenschleifen frueher stoppen",
-        description: "Du lernst, schneller zu merken, wann Nachdenken keine Klarheit mehr bringt, sondern nur Unruhe verlaengert.",
+        quote:
+          "Ich habe mich sofort erkannt und endlich verstanden, warum ich nach Streit so festhaenge.",
+        name: "Julia Weber, 34",
       },
       {
-        title: "Klarheit direkter holen",
-        description: "Unsicherheit wird frueher ueber kurze Rueckfragen statt ueber innere Interpretation verarbeitet.",
+        quote:
+          "Nicht oberflaechlich, sondern extrem praezise. Ich wusste direkt: Das ist mein Thema.",
+        name: "Anne Lorenz, 32",
       },
       {
-        title: "Innere Ruhe vor Reaktion aufbauen",
-        description: "So fuehlt sich Distanz nicht sofort wie ein Warnsignal an, auf das du innerlich springen musst.",
+        quote:
+          "Das eBook hat mir geholfen, ruhiger zu kommunizieren statt alles zu zerdenken.",
+        name: "Sophie Kern, 35",
       },
     ],
-    learn: [
-      "wie du zwischen echtem Signal und eigener Interpretation klarer unterscheidest",
-      "wie du Unsicherheit schneller regulierst, statt sie stundenlang mitzunehmen",
-      "wie du ruhiger kommunizierst, ohne auf staendige Rueckversicherung angewiesen zu sein",
-    ],
-    proof:
-      "Dieses E-Book ist auf Frauen ausgerichtet, die viel wahrnehmen, viel mitdenken und gerade deshalb einen klaren Weg brauchen, wieder mehr innere Ruhe und Beziehungssicherheit aufzubauen.",
-    cta: "Zum E-Book fuer Die Grueblerin",
-    subtext: "Sofortiger Zugriff, klare Uebungen, direkt auf dieses Beziehungsmuster zugeschnitten.",
   },
-  conflict_avoidance: {
-    ebookName: "Das E-Book fuer Die Konfliktvermeiderin",
-    summaryLead:
-      "Deine Antworten zeigen vor allem ein Muster, in dem du Spannung eher klein haeltst oder glatttest, bevor du sie offen in die Beziehung bringst.",
-    path: [
+  emotionalInitiator: {
+    typeName: "emotionale Antreiberin",
+    heroSubtitle: "Du willst schnell wieder Naehe, erzeugst dabei aber manchmal ungewollt Druck.",
+    identity: [
+      "Du sprichst Probleme lieber sofort an, als sie offen zu lassen.",
+      "Distanz haeltst du schwer aus und suchst schnell wieder Verbindung.",
+      "Wenn etwas kippt, gehst du emotional eher nach vorn als zurueck.",
+    ],
+    problems: [
+      "Du ziehst auf Klaerung, waehrend dein Gegenueber noch im Rueckzug ist.",
+      "Dadurch fuehlen sich Gespraeche schnell intensiver an als noetig.",
+      "Dein Wunsch nach Naehe loest dann eher Gegendruck als Offenheit aus.",
+    ],
+    futureRisk: [
+      "Du fuehlst dich weiter allein mit deinem Klaerungswunsch.",
+      "Gespraeche kippen schneller in Spannung.",
+      "Dein Gegenueber zieht sich eher zurueck.",
+    ],
+    futureGain: [
+      "Du schaffst Naehe ohne Druck aufzubauen.",
+      "Du fuehrst Gesprraeche ruhiger und klarer.",
+      "Verbindung entsteht mit mehr Gegenseitigkeit.",
+    ],
+    ebookTitle: "Die emotionale Antreiberin: Naehe schaffen ohne Druck",
+    offerDescription:
+      "Dieses eBook zeigt dir, wie du Verbindung aufbaust, ohne dein Gegenueber zu ueberfordern. Direkt auf dein Muster heruntergebrochen.",
+    outcomes: [
+      "Du erkennst, wann Naehewunsch in Druck kippt.",
+      "Du lernst, emotional klarer zu fuehren.",
+      "Du erzeugst wieder mehr Offenheit statt Rueckzug.",
+    ],
+    testimonials: [
       {
-        title: "Spannung frueher ernst nehmen",
-        description: "Du erkennst kleine Irritationen frueher als Signal, statt sie sofort innerlich herunterzuregeln.",
+        quote:
+          "Ich habe sofort verstanden, warum ich es oft gut meine und trotzdem Druck ausloese.",
+        name: "Nina Mueller, 41",
       },
       {
-        title: "Ruhig und klar ansprechen",
-        description: "Du lernst, Dinge zu benennen, ohne dich haerter oder konfliktsuchender fuehlen zu muessen.",
+        quote:
+          "Sehr klar. Es hat mein Problem nicht verurteilt, sondern endlich greifbar gemacht.",
+        name: "Miriam Bauer, 40",
       },
       {
-        title: "Naehe ueber Offenheit sichern",
-        description: "Beziehung wird stabiler, wenn nicht nur Harmonie, sondern auch Klarheit Platz bekommt.",
+        quote:
+          "Seitdem gehe ich ruhiger in schwierige Gespraeche und bekomme viel weniger Rueckzug.",
+        name: "Tanja Richter, 45",
       },
     ],
-    learn: [
-      "wie du Spannung ansprichst, bevor daraus Distanz wird",
-      "wie du Konflikt nicht automatisch mit Beziehungsgefahr verwechselst",
-      "wie du ruhig bleiben kannst, ohne dich selbst wieder aus dem Gespraech zu nehmen",
-    ],
-    proof:
-      "Dieses E-Book ist fuer Frauen geschrieben, die Frieden in der Beziehung wollen, aber merken, dass zu viel Rueckzug oder Beschwichtigung langfristig keine echte Sicherheit schafft.",
-    cta: "Zum E-Book fuer Die Konfliktvermeiderin",
-    subtext: "Klar strukturiert, alltagsnah und auf mehr Stimme ohne unnoetige Haerte ausgelegt.",
   },
-  emotional_initiating: {
-    ebookName: "Das E-Book fuer Die emotionale Initiatorin",
-    summaryLead:
-      "Deine Antworten zeigen vor allem ein Muster, in dem du bei Distanz, Spannung oder Unsicherheit eher auf Klaerung, Gespraech und Wiederverbindung zugehst.",
-    path: [
+  conflictAvoider: {
+    typeName: "Konfliktvermeiderin",
+    heroSubtitle: "Du willst Ruhe bewahren, doch genau dadurch entsteht oft stille Distanz.",
+    identity: [
+      "Du schluckst Themen eher runter, bevor Streit entsteht.",
+      "Du willst nicht anstrengend wirken und sagst manches lieber nicht.",
+      "Oft merkst du erst spaeter, wie viel sich innerlich angestaut hat.",
+    ],
+    problems: [
+      "Wichtige Themen kommen zu spaet oder gar nicht auf den Tisch.",
+      "Nach aussen bleibt es ruhig, innen waechst aber Frust.",
+      "So entsteht Distanz ohne klare Aussprache.",
+    ],
+    futureRisk: [
+      "Du haeltst weiter zu viel zurueck.",
+      "Naehe fuehlt sich leer statt ehrlich an.",
+      "Du fuehlst dich uebersehen, ohne dich klar zu zeigen.",
+    ],
+    futureGain: [
+      "Du sprichst frueher aus, was dir wirklich wichtig ist.",
+      "Konflikte verlieren ihren Schrecken.",
+      "Eure Beziehung wird ehrlicher und naeher.",
+    ],
+    ebookTitle: "Die Konfliktvermeiderin: Klar sprechen ohne Eskalation",
+    offerDescription:
+      "Dieses eBook zeigt dir, wie du Themen frueher und ruhiger ansprichst, ohne aus Harmonieverlust gleich Gefahr zu machen.",
+    outcomes: [
+      "Du erkennst deinen Rueckzug frueher.",
+      "Du lernst, schwierige Themen sicherer anzusprechen.",
+      "Du baust mehr Ehrlichkeit und Verbindung auf.",
+    ],
+    testimonials: [
       {
-        title: "Initiative besser dosieren",
-        description: "Du bleibst direkt, ohne dass jeder Klaerungsimpuls sofort Dringlichkeit erzeugen muss.",
+        quote:
+          "Ich dachte immer, Ruhe waere automatisch gut. Jetzt verstehe ich, wie viel ich eigentlich vermeide.",
+        name: "Franziska Roth, 37",
       },
       {
-        title: "Timing gezielter waehlen",
-        description: "Du lernst, Naehe zu suchen, ohne Gesprache genau dann zu erzwingen, wenn sie am wenigsten aufnehmen koennen.",
+        quote:
+          "Extrem treffend. Vor allem dieses stille Zurueckhalten, bis man sich innerlich schon entfernt fuehlt.",
+        name: "Lea Schmidt, 33",
       },
       {
-        title: "Mehr Wirkung mit weniger Druck",
-        description: "So bleibt deine Direktheit verbindend, statt unbeabsichtigt Spannung zu verstaerken.",
+        quote:
+          "Ich spreche Probleme jetzt frueher an und fuehle mich dabei deutlich sicherer.",
+        name: "Melanie Brandt, 43",
       },
     ],
-    learn: [
-      "wie du Klarheit suchst, ohne dabei Druck aufzubauen",
-      "wie du zwischen echtem Naehewunsch und innerem Alarm besser unterscheidest",
-      "wie du Gespraeche so fuehrst, dass Verbindung und Anziehung eher wachsen als kippen",
-    ],
-    proof:
-      "Dieses E-Book passt zu Frauen, die viel fuer die Beziehung tun, Gesprache nicht scheuen und jetzt lernen wollen, wie Klarheit ruhiger, wirksamer und attraktiver wird.",
-    cta: "Zum E-Book fuer Die emotionale Initiatorin",
-    subtext: "Direkte Strategien fuer Kommunikation, Timing und weniger emotionalen Ueberdruck.",
   },
-  over_adapting: {
-    ebookName: "Das E-Book fuer Die Anpassende",
-    summaryLead:
-      "Deine Antworten zeigen vor allem ein Muster, in dem du Beziehung stabilisierst, indem du dich frueh auf den anderen ausrichtest und Harmonie aktiv sicherst.",
-    path: [
+  adapter: {
+    typeName: "Anpasserin",
+    heroSubtitle: "Du gibst viel fuer Harmonie, verlierst dabei aber oft dich selbst aus dem Blick.",
+    identity: [
+      "Du sagst schneller ja als nein, damit es leicht bleibt.",
+      "Du stellst eigene Beduerfnisse oft hinter die Beziehung.",
+      "Du merkst meist erst spaet, dass du ueber deine Grenze gegangen bist.",
+    ],
+    problems: [
+      "Du passt dich an, statt dich klar zu zeigen.",
+      "Kurzfristig entsteht Frieden, langfristig aber stiller Frust.",
+      "So fuehlst du dich in der Beziehung immer weniger gesehen.",
+    ],
+    futureRisk: [
+      "Du wirst innerlich erschoepfter und undeutlicher.",
+      "Deine Grenzen verschwimmen immer mehr.",
+      "Naehe fuehlt sich wie Verantwortung statt Gegenseitigkeit an.",
+    ],
+    futureGain: [
+      "Du erkennst Grenzen frueher.",
+      "Du sprichst Beduerfnisse klarer aus.",
+      "Beziehung fuehlt sich wieder gegenseitiger an.",
+    ],
+    ebookTitle: "Die Anpasserin: Grenzen setzen ohne Schuldgefuehl",
+    offerDescription:
+      "Dieses eBook hilft dir, aus stiller Ueberanpassung in mehr Klarheit, Selbstachtung und echte Gegenseitigkeit zu kommen.",
+    outcomes: [
+      "Du erkennst, warum du dich so schnell zuruecknimmst.",
+      "Du lernst, Grenzen zu setzen ohne Schuldgefuehl.",
+      "Du baust mehr Gegenseitigkeit in deiner Beziehung auf.",
+    ],
+    testimonials: [
       {
-        title: "Eigene Position frueher halten",
-        description: "Du bemerkst schneller, wann du mitgehst, bevor du ueberhaupt geprueft hast, was du selbst brauchst.",
+        quote:
+          "Ich habe mich selten so klar beschrieben gefuehlt. Vor allem dieses Ja-Sagen trotz innerem Widerstand.",
+        name: "Sarah Keller, 36",
       },
       {
-        title: "Beduerfnisse ruhiger sichtbar machen",
-        description: "Du lernst, dich klarer einzubringen, ohne aus Verbindung direkt in Haerte kippen zu muessen.",
+        quote:
+          "Kein Verkaufsgeschwaetz, sondern genau mein Thema in klaren Worten.",
+        name: "Carla Neumann, 39",
       },
       {
-        title: "Balance statt Einseitigkeit aufbauen",
-        description: "Unterstuetzung bleibt, aber sie passiert nicht mehr auf Kosten deiner eigenen Linie.",
+        quote:
+          "Ich habe danach zum ersten Mal ruhig Grenzen gesetzt, ohne mich tagelang schlecht zu fuehlen.",
+        name: "Vanessa Schulz, 42",
       },
     ],
-    learn: [
-      "wie du Anpassung frueher erkennst, bevor sie automatisch wird",
-      "wie du eigene Beduerfnisse sichtbar machst, ohne Schuldgefuehl oder Rueckzug",
-      "wie du wieder mehr Gegenseitigkeit und Respekt in die Dynamik bringst",
-    ],
-    proof:
-      "Dieses E-Book ist fuer Frauen geschrieben, die viel tragen, viel mitdenken und jetzt wieder lernen wollen, wie Beziehung auf Augenhoehe statt ueber stilles Mitgehen entsteht.",
-    cta: "Zum E-Book fuer Die Anpassende",
-    subtext: "Praktische Schritte fuer mehr Selbstsichtbarkeit, ruhigere Grenzen und mehr Gegenseitigkeit.",
   },
 };
 
-const RESPONSE_STYLE_COPY = {
-  moves_toward_clarity: "Wenn Spannung steigt, suchst du eher ueber Gespraech, Reaktion und Wiederverbindung nach Sicherheit.",
-  reduces_friction: "Wenn Spannung steigt, versuchst du Reibung zuerst zu senken, bevor du eigene Themen nach vorn bringst.",
-  processes_internally: "Wenn etwas kippt, verarbeitest du es zunaechst innerlich ueber Beobachten, Deuten und Sortieren.",
-  stabilizes_by_adjusting: "Wenn etwas kippt, versuchst du die Beziehung eher dadurch zu beruhigen, dass du dich auf dein Gegenueber einstellst.",
-  mixed_regulation: "Je nach Situation wechselst du zwischen mehreren Strategien, statt immer gleich zu reagieren.",
-};
+const result = getStoredResult();
+const content = RESULT_CONTENT[result.type] || RESULT_CONTENT.overthinker;
+const checkoutButton = document.getElementById("offerCheckoutBtn");
 
-const TRIGGER_COPY = {
-  ambiguity_distance: "Besonders aktiv wird dein Muster meist dann, wenn Distanz, Unklarheit oder fehlende Sicherheit im Raum stehen.",
-  hurt_criticism: "Besonders aktiv wird dein Muster dann, wenn du dich verletzt, kritisiert oder emotional uebergangen fuehlst.",
-  conflict_tension: "Besonders sichtbar wird dein Muster in Momenten, in denen Spannung steigt und ein Gespraech kippen koennte.",
-  partner_distress: "Besonders aktiv wird dein Muster dann, wenn dein Partner gestresst, ueberfordert oder schwer lesbar wirkt.",
-};
+hydratePage();
+initScrollAnimations();
+initCheckout();
 
-const RISK_MARKER_COPY = {
-  rumination_loop: "Dadurch kann sich leicht eine Schleife bilden, in der Nachdenken wie Klaerung wirkt, dich aber innerlich nur laenger bindet.",
-  self_silencing: "Das Risiko dabei ist, dass Harmonie gesichert wird, waehrend deine eigene Position immer leiser wird.",
-  pursuit_under_threat: "Das Risiko dabei ist, dass Unsicherheit schnell Dringlichkeit erzeugt und Gespraeche schwerer statt leichter macht.",
-  over_responsible_repair: "Das Risiko dabei ist, dass du emotionale Reparatur zu stark selbst traegst, statt sie wieder gemeinsam zu verteilen.",
-  context_dependent_pattern: "Dein Ergebnis zeigt ausserdem, dass du unter Stress je nach Situation spuerbar zwischen mehreren Strategien wechseln kannst.",
-};
-
-const fallbackCard = document.getElementById("fallbackCard");
-const resultShell = document.getElementById("resultShell");
-const resultTitle = document.getElementById("resultTitle");
-const resultSummary = document.getElementById("resultSummary");
-const improvementPath = document.getElementById("improvementPath");
-const microInsights = document.getElementById("microInsights");
-const pathNote = document.getElementById("pathNote");
-const programTitle = document.getElementById("programTitle");
-const programCopy = document.getElementById("programCopy");
-const programList = document.getElementById("programList");
-const resultCta = document.getElementById("resultCta");
-const programSubtext = document.getElementById("programSubtext");
-const proofTitle = document.getElementById("proofTitle");
-const proofCopy = document.getElementById("proofCopy");
-const proofStatNumber = document.getElementById("proofStatNumber");
-const proofStatCopy = document.getElementById("proofStatCopy");
-
-init();
-
-function init() {
-  const storedState = loadQuizState();
-  const profile = getProfileFromState(storedState) || buildFallbackProfileFromUrl();
-
-  if (!profile || !TRAITS[profile.primaryTrait || profile.dominantTrait]) {
-    showFallback();
-    return;
-  }
-
-  const personalized = generateResultPageModel(profile);
-
-  fallbackCard.classList.add("is-hidden");
-  resultShell.classList.remove("is-hidden");
-
-  resultTitle.innerHTML = personalized.headlineHtml;
-  resultSummary.textContent = personalized.summary;
-  pathNote.textContent = personalized.pathNote;
-  programTitle.textContent = personalized.programTitle;
-  programCopy.textContent = personalized.programCopy;
-  resultCta.textContent = personalized.ctaLabel;
-  resultCta.href = personalized.ctaUrl;
-  programSubtext.textContent = personalized.programSubtext;
-  proofTitle.textContent = personalized.proofTitle;
-  proofCopy.textContent = personalized.proofCopy;
-  proofStatNumber.textContent = personalized.proofBadge;
-  proofStatCopy.textContent = personalized.proofBadgeCopy;
-
-  renderPathCards(improvementPath, personalized.improvementPath);
-  renderInsightTiles(microInsights, personalized.microInsights);
-  renderProgramPoints(programList, personalized.ebookHighlights);
-
-  window.resultDebug = personalized;
-}
-
-function loadQuizState() {
+function getStoredResult() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null ? parsed : null;
-  } catch {
-    return null;
-  }
-}
+    const rawValue = window.localStorage.getItem(RESULT_STORAGE_KEY);
+    const parsedValue = rawValue ? JSON.parse(rawValue) : null;
 
-function getProfileFromState(state) {
-  if (!state || typeof state !== "object") return null;
-  const profile = state.resultProfile;
-  if (!profile || typeof profile !== "object") return null;
-  const primaryTrait = profile.primaryTrait || profile.dominantTrait;
-  if (!TRAITS[primaryTrait]) return null;
-  return {
-    ...profile,
-    primaryTrait,
-    dominantTrait: profile.dominantTrait || primaryTrait,
-  };
-}
-
-function buildFallbackProfileFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const legacyType = (params.get("type") || "").trim().toUpperCase();
-  const primaryFromLegacy = LEGACY_TYPE_MAP[legacyType] || null;
-  const primary = normalizeTraitId(params.get("primary")) || primaryFromLegacy;
-  const secondary = normalizeTraitId(params.get("secondary"));
-
-  if (!primary) return null;
-  return buildFallbackProfile(primary, secondary);
-}
-
-function generateResultPageModel(profile) {
-  const primaryTraitId = profile.primaryTrait || profile.dominantTrait;
-  const primaryTrait = TRAITS[primaryTraitId];
-  const primaryCopy = RESULT_COPY[primaryTraitId];
-  const secondaryTrait = profile.secondaryTrait ? TRAITS[profile.secondaryTrait] : null;
-  const responseSentence = RESPONSE_STYLE_COPY[profile.responseStyle] || RESPONSE_STYLE_COPY.mixed_regulation;
-  const triggerSentence = profile.triggerTendency
-    ? TRIGGER_COPY[profile.triggerTendency]
-    : "Dein Muster wird besonders deutlich, sobald Verbindung, Spannung oder Lesbarkeit in der Beziehung unsicher wirken.";
-  const riskSentence = profile.riskMarkers && profile.riskMarkers.length
-    ? RISK_MARKER_COPY[profile.riskMarkers[0]] || ""
-    : "";
-
-  const summaryParts = [primaryCopy.summaryLead, responseSentence, triggerSentence];
-  if (secondaryTrait && secondaryTrait.id !== primaryTraitId) {
-    summaryParts.push(
-      `Im zweiten Schritt zeigt sich bei dir oft ${secondaryTrait.strategyLabel}. Genau diese Kombination erklaert, warum sich dein Muster fuer dich so vertraut anfuehlt.`
-    );
-  }
-  if (riskSentence) {
-    summaryParts.push(riskSentence);
-  }
-
-  const insightItems = buildInsightItems(primaryTraitId, responseSentence, triggerSentence, riskSentence, secondaryTrait);
-
-  return {
-    primaryTrait: primaryTraitId,
-    headlineHtml: `<span class="result-hero__title-prefix">Dein Ergebnis:</span> ${escapeHtml(primaryTrait.label)}`,
-    summary: summaryParts.join(" "),
-    improvementPath: primaryCopy.path,
-    pathNote: `Genau diese drei Veraenderungen fuehrt ${primaryCopy.ebookName} fuer dich Schritt fuer Schritt zusammen.`,
-    microInsights: insightItems,
-    programTitle: "Das passende E-Book fuer dich",
-    programCopy: `${primaryCopy.ebookName} wurde fuer Frauen geschrieben, die dieses Muster nicht nur erkennen, sondern im Alltag konkret veraendern wollen.`,
-    ebookHighlights: primaryCopy.learn,
-    ctaLabel: primaryCopy.cta,
-    ctaUrl: EBOOK_URLS[primaryTraitId] || "#",
-    programSubtext: primaryCopy.subtext,
-    proofTitle: "Warum genau dieses E-Book fuer dich passt.",
-    proofCopy: primaryCopy.proof,
-    proofBadge: "4 E-Books",
-    proofBadgeCopy: `aber fuer dein Ergebnis ist vor allem ${primaryCopy.ebookName.toLowerCase()} relevant.`,
-  };
-}
-
-function buildInsightItems(primaryTraitId, responseSentence, triggerSentence, riskSentence, secondaryTrait) {
-  const items = [];
-
-  items.push(triggerSentence);
-
-  if (secondaryTrait) {
-    items.push(
-      `${responseSentence} Zusaetzlich zeigt sich bei dir haeufig ${secondaryTrait.strategyLabel}, sobald dein Hauptmuster schon aktiviert ist.`
-    );
-  } else {
-    items.push(responseSentence);
-  }
-
-  if (riskSentence) {
-    items.push(riskSentence);
-  } else {
-    items.push(getDefaultCostSentence(primaryTraitId));
-  }
-
-  return items;
-}
-
-function getDefaultCostSentence(primaryTraitId) {
-  switch (primaryTraitId) {
-    case "overthinking":
-      return "Ohne neuen Umgang damit bleibt oft viel innere Unruhe bestehen, obwohl im Aussen noch gar nichts wirklich geklaert wurde.";
-    case "conflict_avoidance":
-      return "Ohne neuen Umgang damit bleibt nach aussen oft Ruhe, waehrend sich innen unerledigte Themen und Distanz aufbauen koennen.";
-    case "emotional_initiating":
-      return "Ohne neuen Umgang damit wird dein Wunsch nach Klaerung schnell zu viel Tempo fuer den Moment und verliert dadurch Wirkung.";
-    case "over_adapting":
-      return "Ohne neuen Umgang damit bleibt die Beziehung oft ruhig, waehrend deine eigene Position immer weniger sichtbar wird.";
-    default:
-      return "Ohne neuen Umgang damit wiederholt sich das Muster leichter genau in den Momenten, in denen du eigentlich mehr Sicherheit brauchst.";
-  }
-}
-
-function renderInsightTiles(target, items) {
-  const titles = [
-    "Was dich aktiviert",
-    "Wie du dann reagierst",
-    "Woran es dich kostet",
-  ];
-  target.innerHTML = "";
-  items.forEach((item, index) => {
-    const point = document.createElement("article");
-    point.className = "insight-point";
-    if (index === 0) {
-      point.classList.add("is-open");
+    if (parsedValue && RESULT_CONTENT[parsedValue.type]) {
+      return parsedValue;
     }
-    point.innerHTML = `
-      <button
-        class="insight-point__trigger"
-        type="button"
-        aria-expanded="${index === 0 ? "true" : "false"}"
-      >
-        <span class="insight-point__trigger-main">
-          <span class="insight-point__index">0${index + 1}</span>
-          <span class="insight-point__title">${titles[index] || `Punkt ${index + 1}`}</span>
-        </span>
-        <span class="insight-point__icon" aria-hidden="true">
-          <i class="fa-solid fa-plus"></i>
-        </span>
-      </button>
-      <div class="insight-point__panel">
-        <div class="insight-point__panel-inner">
-          <p class="insight-point__copy">${escapeHtml(capitalizeFirst(item))}</p>
+  } catch (error) {
+    console.error("Result state could not be read.", error);
+  }
+
+  return {
+    type: "overthinker",
+    confidence: 87,
+  };
+}
+
+function hydratePage() {
+  setText("resultTypeName", content.typeName);
+  setText("resultHeroSubtitle", content.heroSubtitle);
+  setText("ebookTitle", content.ebookTitle);
+  setText("offerDescription", content.offerDescription);
+
+  renderSimpleList("identityList", content.identity);
+  renderSimpleList("problemList", content.problems);
+  renderSimpleList("futureRiskList", content.futureRisk);
+  renderSimpleList("futureGainList", content.futureGain);
+  renderOutcomes();
+  renderTestimonials();
+}
+
+function renderSimpleList(id, items) {
+  const root = document.getElementById(id);
+  if (!root) return;
+
+  root.innerHTML = "";
+  items.forEach((item) => {
+    const listItem = document.createElement("li");
+    listItem.textContent = item;
+    root.appendChild(listItem);
+  });
+}
+
+function renderOutcomes() {
+  const root = document.getElementById("offerOutcomeList");
+  if (!root) return;
+
+  root.innerHTML = "";
+  content.outcomes.forEach((item) => {
+    const listItem = document.createElement("li");
+    listItem.textContent = item;
+    root.appendChild(listItem);
+  });
+}
+
+function renderTestimonials() {
+  const topRow = document.getElementById("testimonialsRowTop");
+  const bottomRow = document.getElementById("testimonialsRowBottom");
+
+  if (!topRow || !bottomRow) return;
+
+  const testimonialDates = [
+    "08 Mar 2026",
+    "07 Mar 2026",
+    "06 Mar 2026",
+    "08 Mar 2026",
+    "07 Mar 2026",
+    "06 Mar 2026",
+  ];
+
+  const cards = [...content.testimonials, ...content.testimonials].map((item, index) => ({
+    ...item,
+    date: testimonialDates[index] || "08 Mar 2026",
+  }));
+
+  topRow.innerHTML = "";
+  bottomRow.innerHTML = "";
+
+  cards.forEach((item, index) => {
+    const card = document.createElement("article");
+    card.className = "testimonial-card";
+    card.innerHTML = `
+      <p class="testimonial-card__quote">${item.quote}</p>
+      <div class="testimonial-card__footer">
+        <span class="testimonial-card__avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
+        <div class="testimonial-card__meta">
+          <h3 class="testimonial-card__name">${item.name}</h3>
+          <p class="testimonial-card__role"><i class="fa-regular fa-clock" aria-hidden="true"></i><span>${item.date}</span></p>
         </div>
       </div>
     `;
-    target.appendChild(point);
-  });
 
-  const points = [...target.querySelectorAll(".insight-point")];
-  points.forEach((point) => {
-    const trigger = point.querySelector(".insight-point__trigger");
-    if (!trigger) return;
-    trigger.addEventListener("click", () => {
-      points.forEach((otherPoint) => {
-        const otherTrigger = otherPoint.querySelector(".insight-point__trigger");
-        const isCurrent = otherPoint === point;
-        const shouldOpen = isCurrent ? !otherPoint.classList.contains("is-open") : false;
-        otherPoint.classList.toggle("is-open", shouldOpen);
-        if (otherTrigger) {
-          otherTrigger.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
-        }
-      });
-    });
+    if (index % 2 === 0) {
+      topRow.appendChild(card);
+      return;
+    }
+
+    bottomRow.appendChild(card);
   });
 }
 
-function renderProgramPoints(target, items) {
-  const titles = [
-    "Warum es sich wiederholt",
-    "Was du konkret veraenderst",
-    "Wie Beziehung dadurch kippt oder sich stabilisiert",
-  ];
-  target.innerHTML = "";
-  items.forEach((item, index) => {
-    const point = document.createElement("article");
-    point.className = "program-point";
-    point.innerHTML = `
-      <h3 class="program-point__title">${titles[index] || `Punkt ${index + 1}`}</h3>
-      <p class="program-point__copy">${escapeHtml(capitalizeFirst(item))}</p>
-    `;
-    target.appendChild(point);
-  });
+function setText(id, value) {
+  const node = document.getElementById(id);
+  if (node) {
+    node.textContent = value;
+  }
 }
 
-function renderPathCards(target, items) {
-  target.innerHTML = "";
-  items.forEach((item, index) => {
-    const card = document.createElement("article");
-    card.className = `path-step path-step--${(index % 3) + 1}`;
-    card.style.setProperty("--path-index", String(index + 1));
-    card.innerHTML = `
-      <span class="path-step__number">${index + 1}</span>
-      <h3 class="path-step__title">${escapeHtml(item.title)}</h3>
-      <p class="path-step__desc">${escapeHtml(item.description)}</p>
-    `;
-    target.appendChild(card);
-  });
-}
+function initScrollAnimations() {
+  const nodes = document.querySelectorAll(".animate-on-scroll");
 
-function capitalizeFirst(value) {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
+  if (!("IntersectionObserver" in window)) {
+    nodes.forEach((node) => node.classList.add("animate"));
+    return;
+  }
 
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function showFallback() {
-  fallbackCard.classList.remove("is-hidden");
-  resultShell.classList.add("is-hidden");
-}
-
-document.addEventListener("DOMContentLoaded", () => {
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add("animate");
+          observer.unobserve(entry.target);
         }
       });
     },
     {
-      threshold: 0.1,
-      rootMargin: "0px 0px -50px 0px",
-    }
+      threshold: 0.18,
+      rootMargin: "0px 0px -40px 0px",
+    },
   );
 
-  document.querySelectorAll(".animate-on-scroll").forEach((element) => observer.observe(element));
-});
+  nodes.forEach((node) => observer.observe(node));
+}
+
+function initCheckout() {
+  if (!checkoutButton) {
+    return;
+  }
+
+  checkoutButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const originalLabel = checkoutButton.innerHTML;
+
+    checkoutButton.setAttribute("aria-disabled", "true");
+    checkoutButton.style.pointerEvents = "none";
+    checkoutButton.textContent = "Weiterleitung...";
+
+    try {
+      const response = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resultType: result.type,
+          origin: window.location.origin,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.url) {
+        throw new Error(data.error || "Checkout konnte nicht gestartet werden.");
+      }
+
+      window.location.assign(data.url);
+    } catch (error) {
+      checkoutButton.innerHTML = originalLabel;
+      checkoutButton.style.pointerEvents = "";
+      checkoutButton.removeAttribute("aria-disabled");
+      window.alert(error instanceof Error ? error.message : "Checkout konnte nicht gestartet werden.");
+    }
+  });
+}
