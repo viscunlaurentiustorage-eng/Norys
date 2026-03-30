@@ -4,10 +4,12 @@ const RESULT_CONTENT = window.NORYS_RESULT_CONTENT || {};
 const result = getStoredResult();
 const content = RESULT_CONTENT[result.type] || RESULT_CONTENT.overthinker;
 const checkoutButton = document.getElementById("ebookCheckoutBtn");
+const payPalButton = document.getElementById("ebookPayPalBtn");
 
 hydratePage();
 initScrollAnimations();
 initCheckout();
+initPayPalCheckout();
 
 function getStoredResult() {
   try {
@@ -176,6 +178,57 @@ function initCheckout() {
       checkoutButton.style.pointerEvents = "";
       checkoutButton.removeAttribute("aria-disabled");
       window.alert(error instanceof Error ? error.message : "Checkout konnte nicht gestartet werden.");
+    }
+  });
+}
+
+function initPayPalCheckout() {
+  if (!payPalButton) {
+    return;
+  }
+
+  payPalButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const originalLabel = payPalButton.textContent;
+
+    payPalButton.style.pointerEvents = "none";
+    payPalButton.textContent = "Weiterleitung...";
+
+    try {
+      if (!/^https?:$/.test(window.location.protocol)) {
+        throw new Error("Oeffne die Seite ueber deine Live-URL oder localhost, nicht direkt als lokale Datei.");
+      }
+
+      const endpoint = new URL("/api/paypal/create-order", window.location.origin).toString();
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resultType: result.type,
+        }),
+      });
+
+      const rawText = await response.text();
+      let data = {};
+
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (_error) {
+        data = { error: rawText || "PayPal Checkout konnte nicht gestartet werden." };
+      }
+
+      if (!response.ok || !data.approveUrl) {
+        const fallbackMessage = `PayPal Checkout konnte nicht gestartet werden (HTTP ${response.status}).`;
+        throw new Error(data.error || fallbackMessage);
+      }
+
+      window.location.assign(data.approveUrl);
+    } catch (error) {
+      payPalButton.textContent = originalLabel;
+      payPalButton.style.pointerEvents = "";
+      window.alert(error instanceof Error ? error.message : "PayPal Checkout konnte nicht gestartet werden.");
     }
   });
 }

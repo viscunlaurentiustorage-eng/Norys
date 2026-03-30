@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PayPal Zahlung bestaetigt | Norys</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.cdnfonts.com/css/hagrid-trial" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <style>
+      body { background: var(--bg); }
+      .paypal-success-page {
+        min-height: 100vh;
+        padding: 118px 0 64px;
+        display: flex;
+        align-items: center;
+      }
+      .paypal-success-card {
+        width: min(760px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 32px;
+        border-radius: 24px;
+        background: #f7e9dc;
+        border: 1px solid rgba(17, 17, 17, 0.08);
+        display: grid;
+        gap: 18px;
+      }
+      .paypal-success-title {
+        margin: 0;
+        font-family: "Hagrid Trial", "Montserrat", sans-serif;
+        font-size: clamp(2rem, 6vw, 3.3rem);
+        line-height: 1.05;
+      }
+      .paypal-success-copy,
+      .paypal-success-status {
+        margin: 0;
+        line-height: 1.6;
+        color: rgba(17, 17, 17, 0.74);
+      }
+      .paypal-success-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .paypal-success-link {
+        color: var(--accent);
+        font-weight: 700;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-shell">
+        <a class="brand" href="index.html" aria-label="Norys Startseite">
+          <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
+          <span class="brand__name">Norys</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="paypal-success-page">
+      <section class="paypal-success-card">
+        <h1 class="paypal-success-title">Deine PayPal Zahlung wird bestaetigt.</h1>
+        <p class="paypal-success-copy" id="paypalSuccessCopy">Wir pruefen gerade deine Bestellung und bereiten dein eBook vor.</p>
+        <p class="paypal-success-status" id="paypalSuccessStatus">Einen Moment bitte...</p>
+        <div class="paypal-success-actions" id="paypalSuccessActions"></div>
+      </section>
+    </main>
+
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      const paypalSuccessCopy = document.getElementById("paypalSuccessCopy");
+      const paypalSuccessStatus = document.getElementById("paypalSuccessStatus");
+      const paypalSuccessActions = document.getElementById("paypalSuccessActions");
+
+      async function run() {
+        if (!token) {
+          paypalSuccessStatus.textContent = "Die PayPal Bestellung fehlt. Bitte starte den Kauf erneut.";
+          return;
+        }
+
+        try {
+          const captureResponse = await fetch("/api/paypal/capture-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orderId: token }),
+          });
+          const captureData = await captureResponse.json();
+
+          if (!captureResponse.ok) {
+            throw new Error(captureData.error || "PayPal Zahlung konnte nicht bestaetigt werden.");
+          }
+
+          const statusResponse = await fetch(`/api/paypal/order-status?order_id=${encodeURIComponent(token)}`);
+          const statusData = await statusResponse.json();
+
+          if (!statusResponse.ok) {
+            throw new Error(statusData.error || "PayPal Bestellung konnte nicht gelesen werden.");
+          }
+
+          paypalSuccessCopy.textContent = statusData.productName
+            ? `Dein Kauf fuer "${statusData.productName}" ist erfolgreich abgeschlossen.`
+            : "Dein Kauf ist erfolgreich abgeschlossen.";
+          paypalSuccessStatus.textContent = "Dein eBook steht jetzt zum Download bereit.";
+          paypalSuccessActions.innerHTML = `
+            <a class="cta" href="${statusData.downloadUrl}">
+              eBook herunterladen
+              <span class="cta__arrow" aria-hidden="true">
+                <i class="fa-solid fa-arrow-right-long"></i>
+              </span>
+            </a>
+            <a class="paypal-success-link" href="ebook.html">Zurueck zur eBook Seite</a>
+          `;
+        } catch (error) {
+          paypalSuccessStatus.textContent = error.message || "Es ist ein Fehler bei der PayPal Bestaetigung aufgetreten.";
+        }
+      }
+
+      run();
+    </script>
+  </body>
+</html>

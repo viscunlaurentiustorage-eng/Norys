@@ -12,6 +12,11 @@ const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "";
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+const paypalClientId = process.env.PAYPAL_CLIENT_ID || "";
+const paypalClientSecret = process.env.PAYPAL_CLIENT_SECRET || "";
+const paypalEnv = (process.env.PAYPAL_ENV || "sandbox").toLowerCase() === "live" ? "live" : "sandbox";
+const paypalApiBase =
+  paypalEnv === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 
 const RESULT_STORAGE_KEY = "norysResult";
 
@@ -84,10 +89,61 @@ function buildAbsoluteUrl(base, pathnameWithSearch) {
   return new URL(pathnameWithSearch, `${base}/`).toString();
 }
 
+async function getPayPalAccessToken() {
+  if (!paypalClientId || !paypalClientSecret) {
+    throw new Error("PayPal is not configured. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to your environment.");
+  }
+
+  const auth = Buffer.from(`${paypalClientId}:${paypalClientSecret}`).toString("base64");
+  const response = await fetch(`${paypalApiBase}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+
+  const data = await response.json();
+  if (!response.ok || !data.access_token) {
+    throw new Error(data.error_description || data.error || "PayPal access token could not be created.");
+  }
+
+  return data.access_token;
+}
+
+async function paypalRequest(pathname, options = {}) {
+  const accessToken = await getPayPalAccessToken();
+  const response = await fetch(`${paypalApiBase}${pathname}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    const issue = data?.details?.[0]?.issue;
+    const description = data?.details?.[0]?.description;
+    throw new Error(description || issue || data.message || "PayPal request failed.");
+  }
+
+  return data;
+}
+
 app.get("/api/stripe-config", (_request, response) => {
   response.json({
     publishableKey: stripePublishableKey,
     resultStorageKey: RESULT_STORAGE_KEY,
+  });
+});
+
+app.get("/api/paypal-config", (_request, response) => {
+  response.json({
+    clientId: paypalClientId,
+    env: paypalEnv,
   });
 });
 
@@ -218,6 +274,161 @@ app.get("/api/download-ebook", async (request, response) => {
   } catch (error) {
     console.error("Stripe ebook download failed:", error);
     response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
+  }
+});
+
+app.post("/api/paypal/create-order", async (request, response) => {
+  try {
+    const resultType = request.body?.resultType;
+    const product = PRODUCTS[resultType];
+
+    if (!product) {
+      response.status(400).json({ error: "Unknown result type." });
+      return;
+    }
+
+    const publicBaseUrl = getPublicBaseUrl(request);
+    const returnUrl = buildAbsoluteUrl(publicBaseUrl, "/paypal-success.html");
+    const cancelUrl = buildAbsoluteUrl(publicBaseUrl, "/ebook.html");
+
+    const order = await paypalRequest("/v2/checkout/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        intent: "CAPTURE",
+        purchase_units: [
+          {
+            custom_id: resultType,
+            description: product.name,
+            amount: {
+              currency_code: product.currency.toUpperCase(),
+              value: (product.amount / 100).toFixed(2),
+            },
+          },
+        ],
+        application_context: {
+          brand_name: "Norys",
+          shipping_preference: "NO_SHIPPING",
+          user_action: "PAY_NOW",
+          return_url: returnUrl,
+          cancel_url: cancelUrl,
+        },
+      }),
+    });
+
+    const approveLink = order.links?.find((link) => link.rel === "approve")?.href || "";
+
+    response.json({
+      orderId: order.id,
+      approveUrl: approveLink,
+    });
+  } catch (error) {
+    console.error("PayPal create order failed:", error);
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "PayPal order could not be created.",
+    });
+  }
+});
+
+app.post("/api/paypal/capture-order", async (request, response) => {
+  try {
+    const orderId = request.body?.orderId;
+    if (typeof orderId !== "string" || !orderId) {
+      response.status(400).json({ error: "Missing orderId." });
+      return;
+    }
+
+    const capture = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    response.json({
+      orderId: capture.id,
+      status: capture.status,
+      resultType: capture.purchase_units?.[0]?.custom_id || "",
+    });
+  } catch (error) {
+    console.error("PayPal capture order failed:", error);
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "PayPal order could not be captured.",
+    });
+  }
+});
+
+app.get("/api/paypal/order-status", async (request, response) => {
+  try {
+    const orderId = request.query.order_id;
+    if (typeof orderId !== "string" || !orderId) {
+      response.status(400).json({ error: "Missing order_id." });
+      return;
+    }
+
+    const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+      method: "GET",
+    });
+
+    const resultType = order.purchase_units?.[0]?.custom_id || "";
+    const product = PRODUCTS[resultType];
+    const captureStatus =
+      order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
+    const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
+
+    response.json({
+      orderId: order.id,
+      status: order.status,
+      captureStatus,
+      resultType,
+      productName: product?.name || "",
+      downloadUrl: isPaid ? `/api/download-ebook-paypal?order_id=${encodeURIComponent(order.id)}` : "",
+    });
+  } catch (error) {
+    console.error("PayPal order status failed:", error);
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "PayPal order could not be verified.",
+    });
+  }
+});
+
+app.get("/api/download-ebook-paypal", async (request, response) => {
+  try {
+    const orderId = request.query.order_id;
+    if (typeof orderId !== "string" || !orderId) {
+      response.status(400).send("Missing order_id.");
+      return;
+    }
+
+    const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+      method: "GET",
+    });
+
+    const resultType = order.purchase_units?.[0]?.custom_id || "";
+    const product = PRODUCTS[resultType];
+    const captureStatus =
+      order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
+    const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
+
+    if (!isPaid) {
+      response.status(403).send("This PayPal payment is not completed.");
+      return;
+    }
+
+    if (!product) {
+      response.status(404).send("No ebook is configured for this result type.");
+      return;
+    }
+
+    const ebookPath = path.join(__dirname, "ebooks", product.fileName);
+    if (!fs.existsSync(ebookPath)) {
+      response.status(404).send(
+        `The ebook file is missing. Add ${product.fileName} to the ebooks directory.`,
+      );
+      return;
+    }
+
+    response.download(ebookPath, product.fileName);
+  } catch (error) {
+    console.error("PayPal ebook download failed:", error);
+    response.status(500).send(error instanceof Error ? error.message : "PayPal download could not be prepared.");
   }
 });
 
