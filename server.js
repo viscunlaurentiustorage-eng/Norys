@@ -80,6 +80,10 @@ function getPublicBaseUrl(request) {
   return `${protocol || "https"}://${host}`.replace(/\/+$/, "");
 }
 
+function buildAbsoluteUrl(base, pathnameWithSearch) {
+  return new URL(pathnameWithSearch, `${base}/`).toString();
+}
+
 app.get("/api/stripe-config", (_request, response) => {
   response.json({
     publishableKey: stripePublishableKey,
@@ -105,6 +109,11 @@ app.post("/api/create-checkout-session", async (request, response) => {
     }
 
     const publicBaseUrl = getPublicBaseUrl(request);
+    const successUrl = buildAbsoluteUrl(
+      publicBaseUrl,
+      "/success.html?session_id={CHECKOUT_SESSION_ID}",
+    );
+    const cancelUrl = buildAbsoluteUrl(publicBaseUrl, "/result.html");
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -124,8 +133,8 @@ app.post("/api/create-checkout-session", async (request, response) => {
       metadata: {
         resultType,
       },
-      success_url: `${publicBaseUrl}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${publicBaseUrl}/result.html`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     });
 
     response.json({ url: session.url });

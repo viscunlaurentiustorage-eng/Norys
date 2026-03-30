@@ -356,18 +356,30 @@ function initCheckout() {
     checkoutButton.textContent = "Weiterleitung...";
 
     try {
-      const response = await fetch("/api/create-checkout-session", {
+      if (!/^https?:$/.test(window.location.protocol)) {
+        throw new Error("Oeffne die Seite ueber deine Live-URL oder localhost, nicht direkt als lokale Datei.");
+      }
+
+      const endpoint = new URL("/api/create-checkout-session", window.location.origin).toString();
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           resultType: result.type,
-          origin: window.location.origin,
         }),
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data = {};
+
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (_error) {
+        data = { error: rawText || "Checkout konnte nicht gestartet werden." };
+      }
+
       if (!response.ok || !data.url) {
         throw new Error(data.error || "Checkout konnte nicht gestartet werden.");
       }
