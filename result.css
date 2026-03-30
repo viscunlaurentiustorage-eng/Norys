@@ -60,7 +60,7 @@ body {
 }
 
 .result-shell--hero {
-  max-width: 860px;
+  max-width: 760px;
 }
 
 .result-hero__content {
@@ -83,8 +83,11 @@ body {
 }
 
 .result-hero__title {
-  font-size: clamp(2.7rem, 10vw, 5.35rem);
-  max-width: 11ch;
+  font-size: clamp(2.1rem, 8vw, 4.1rem);
+  max-width: min(100%, 9.5ch);
+  margin-inline: auto;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .section-heading__title {
@@ -345,6 +348,12 @@ body {
 @media (min-width: 720px) {
   .result-hero__content {
     gap: 18px;
+  }
+
+  .result-hero__title {
+    max-width: 11ch;
+    word-break: normal;
+    overflow-wrap: normal;
   }
 
   .offer-action {

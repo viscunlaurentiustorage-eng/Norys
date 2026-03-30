@@ -1,10 +1,13 @@
 const RESULT_STORAGE_KEY = window.NORYS_RESULT_STORAGE_KEY || "norysResult";
 const RESULT_CONTENT = window.NORYS_RESULT_CONTENT || {};
+
 const result = getStoredResult();
 const content = RESULT_CONTENT[result.type] || RESULT_CONTENT.overthinker;
+const checkoutButton = document.getElementById("ebookCheckoutBtn");
 
 hydratePage();
 initScrollAnimations();
+initCheckout();
 
 function getStoredResult() {
   try {
@@ -20,42 +23,26 @@ function getStoredResult() {
 
   return {
     type: "overthinker",
-    confidence: 87,
   };
 }
 
 function hydratePage() {
-  setText("resultTypeName", content.typeName);
-  setText("resultHeroSubtitle", content.heroSubtitle);
-  setText("ebookTitle", content.ebookTitle);
-  setText("offerDescription", content.offerDescription);
+  setText("ebookHeroTitle", content.ebookTitle);
+  setText("ebookHeroSubtitle", content.heroSubtitle);
+  setText("ebookIntroText", content.offerDescription);
+  setText("ebookOfferDescription", content.offerDescription);
 
-  renderSimpleList("identityList", content.identity);
-  renderSimpleList("problemList", content.problems);
-  renderSimpleList("futureRiskList", content.futureRisk);
-  renderSimpleList("futureGainList", content.futureGain);
-  renderOutcomes();
+  renderList("ebookOutcomeList", content.outcomes);
+  renderList("ebookIncludesList", content.ebookIncludes || content.outcomes);
   renderTestimonials();
 }
 
-function renderSimpleList(id, items) {
+function renderList(id, items) {
   const root = document.getElementById(id);
   if (!root) return;
 
   root.innerHTML = "";
   items.forEach((item) => {
-    const listItem = document.createElement("li");
-    listItem.textContent = item;
-    root.appendChild(listItem);
-  });
-}
-
-function renderOutcomes() {
-  const root = document.getElementById("offerOutcomeList");
-  if (!root) return;
-
-  root.innerHTML = "";
-  content.outcomes.forEach((item) => {
     const listItem = document.createElement("li");
     listItem.textContent = item;
     root.appendChild(listItem);
@@ -101,10 +88,9 @@ function renderTestimonials() {
 
     if (index % 2 === 0) {
       topRow.appendChild(card);
-      return;
+    } else {
+      bottomRow.appendChild(card);
     }
-
-    bottomRow.appendChild(card);
   });
 }
 
@@ -139,4 +125,57 @@ function initScrollAnimations() {
   );
 
   nodes.forEach((node) => observer.observe(node));
+}
+
+function initCheckout() {
+  if (!checkoutButton) {
+    return;
+  }
+
+  checkoutButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const originalLabel = checkoutButton.innerHTML;
+
+    checkoutButton.setAttribute("aria-disabled", "true");
+    checkoutButton.style.pointerEvents = "none";
+    checkoutButton.textContent = "Weiterleitung...";
+
+    try {
+      if (!/^https?:$/.test(window.location.protocol)) {
+        throw new Error("Oeffne die Seite ueber deine Live-URL oder localhost, nicht direkt als lokale Datei.");
+      }
+
+      const endpoint = new URL("/api/create-checkout-session", window.location.origin).toString();
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          resultType: result.type,
+        }),
+      });
+
+      const rawText = await response.text();
+      let data = {};
+
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch (_error) {
+        data = { error: rawText || "Checkout konnte nicht gestartet werden." };
+      }
+
+      if (!response.ok || !data.url) {
+        const fallbackMessage = `Checkout konnte nicht gestartet werden (HTTP ${response.status}).`;
+        throw new Error(data.error || fallbackMessage);
+      }
+
+      window.location.assign(data.url);
+    } catch (error) {
+      checkoutButton.innerHTML = originalLabel;
+      checkoutButton.style.pointerEvents = "";
+      checkoutButton.removeAttribute("aria-disabled");
+      window.alert(error instanceof Error ? error.message : "Checkout konnte nicht gestartet werden.");
+    }
+  });
 }

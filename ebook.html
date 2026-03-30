@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dein eBook | Norys</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.cdnfonts.com/css/hagrid-trial" rel="stylesheet" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+    <link rel="stylesheet" href="result.css" />
+    <link rel="stylesheet" href="ebook.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-shell">
+        <a class="brand" href="index.html" aria-label="Norys Startseite">
+          <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
+          <span class="brand__name">Norys</span>
+        </a>
+
+        <button class="lang-pill" type="button" aria-label="Sprache wählen">
+          <i class="fa-solid fa-globe" aria-hidden="true"></i>
+          <span>Deutsch</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="result-page ebook-page">
+      <section class="result-hero animate-on-scroll">
+        <div class="container">
+          <div class="result-shell result-shell--hero">
+            <div class="result-hero__content ebook-hero__content">
+              <p class="ebook-hero__kicker">Dein passendes eBook</p>
+              <h1 class="result-hero__title ebook-hero__title" id="ebookHeroTitle">
+                Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe
+              </h1>
+              <p class="result-hero__subtitle ebook-hero__subtitle" id="ebookHeroSubtitle">
+                Dieses eBook ist fuer dein Ergebnis gebaut und zeigt dir, wie du genau dieses Muster veraenderst.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section animate-on-scroll">
+        <div class="container">
+          <div class="result-shell ebook-intro">
+            <article class="result-card ebook-intro__card">
+              <h2 class="section-heading__title">Was du mit diesem eBook wirklich kaufst</h2>
+              <p class="offer-card__text" id="ebookIntroText">
+                Kein allgemeines Beziehungswissen, sondern eine klare Vertiefung zu genau dem Muster, das dein Ergebnis gezeigt hat.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section animate-on-scroll">
+        <div class="container">
+          <div class="result-shell">
+            <div class="section-heading">
+              <h2 class="section-heading__title">Das bekommst du konkret</h2>
+            </div>
+            <div class="ebook-grid">
+              <article class="result-card ebook-grid__card">
+                <h3 class="ebook-grid__title">Ergebnisse fuer deinen Alltag</h3>
+                <ul class="offer-benefits" id="ebookOutcomeList"></ul>
+              </article>
+              <article class="result-card ebook-grid__card">
+                <h3 class="ebook-grid__title">Was im eBook enthalten ist</h3>
+                <ul class="offer-benefits" id="ebookIncludesList"></ul>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-section animate-on-scroll" id="ebookOfferSection">
+        <article class="offer-card offer-card--free ebook-offer">
+          <div class="container">
+            <div class="result-shell ebook-offer__shell">
+              <div class="offer-card__copy">
+                <h2 class="section-heading__title">Wenn du dieses Muster wirklich veraendern willst, ist das dein naechster Schritt</h2>
+                <p class="offer-card__text" id="ebookOfferDescription"></p>
+              </div>
+
+              <div class="ebook-offer__panel">
+                <div class="pricing-inline">
+                  <p class="pricing-inline__old">Statt <span>29,90 EUR</span></p>
+                  <p class="pricing-inline__new"><span>9,99 EUR</span></p>
+                  <p class="pricing-inline__hint">Sofortiger Zugriff nach deiner Zahlung</p>
+                </div>
+
+                <a class="cta" href="#" id="ebookCheckoutBtn">
+                  Jetzt eBook freischalten
+                  <span class="cta__arrow" aria-hidden="true">
+                    <i class="fa-solid fa-arrow-right-long"></i>
+                  </span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="result-section result-section--testimonials animate-on-scroll">
+        <div class="testimonials-block">
+          <div class="container">
+            <div class="result-shell">
+              <div class="section-heading section-heading--testimonials">
+                <h2 class="section-heading__title">So fuehlt sich die Vertiefung fuer andere an</h2>
+              </div>
+            </div>
+          </div>
+          <section class="testimonials" id="testimonials">
+            <div class="testimonials__viewport">
+              <div class="testimonials__row testimonials__row--top" id="testimonialsRowTop"></div>
+              <div class="testimonials__row testimonials__row--bottom" id="testimonialsRowBottom"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="assets/result-content.js?v=20260330c"></script>
+    <script src="ebook.js?v=20260330c"></script>
+    <script src="assets/script.js?v=20260330b"></script>
+  </body>
+</html>

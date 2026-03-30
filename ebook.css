@@ -1,0 +1,66 @@
+.ebook-page .result-section {
+  padding-bottom: clamp(56px, 8vw, 104px);
+}
+
+.ebook-hero__content {
+  max-width: 760px;
+}
+
+.ebook-hero__kicker {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.ebook-hero__title {
+  max-width: 13ch;
+}
+
+.ebook-intro__card,
+.ebook-grid__card {
+  display: grid;
+  gap: 16px;
+}
+
+.ebook-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.ebook-grid__title {
+  margin: 0;
+  font-family: "Hagrid Trial", "Montserrat", sans-serif;
+  font-size: clamp(1.15rem, 2.6vw, 1.55rem);
+  font-weight: 500;
+  line-height: 1.12;
+}
+
+.ebook-offer {
+  padding-top: clamp(52px, 7vw, 88px);
+  padding-bottom: clamp(52px, 7vw, 88px);
+}
+
+.ebook-offer__shell {
+  display: grid;
+  gap: 26px;
+}
+
+.ebook-offer__panel {
+  display: grid;
+  gap: 18px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(17, 17, 17, 0.08);
+}
+
+@media (min-width: 720px) {
+  .ebook-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ebook-offer__shell {
+    grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+    align-items: end;
+  }
+}
