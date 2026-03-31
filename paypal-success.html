@@ -92,22 +92,21 @@
         }
 
         try {
-          const captureResponse = await fetch("/api/paypal/capture-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ orderId: token }),
-          });
-          const captureData = await captureResponse.json();
+          let statusData = await loadOrderStatus();
 
-          if (!captureResponse.ok) {
-            throw new Error(captureData.error || "PayPal Zahlung konnte nicht bestaetigt werden.");
-          }
+          if (!statusData.downloadUrl) {
+            const captureResponse = await fetch("/api/paypal/capture-order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderId: token }),
+            });
+            const captureData = await captureResponse.json();
 
-          const statusResponse = await fetch(`/api/paypal/order-status?order_id=${encodeURIComponent(token)}`);
-          const statusData = await statusResponse.json();
+            if (!captureResponse.ok) {
+              throw new Error(captureData.error || "PayPal Zahlung konnte nicht bestaetigt werden.");
+            }
 
-          if (!statusResponse.ok) {
-            throw new Error(statusData.error || "PayPal Bestellung konnte nicht gelesen werden.");
+            statusData = await loadOrderStatus();
           }
 
           paypalSuccessCopy.textContent = statusData.productName
@@ -126,6 +125,17 @@
         } catch (error) {
           paypalSuccessStatus.textContent = error.message || "Es ist ein Fehler bei der PayPal Bestaetigung aufgetreten.";
         }
+      }
+
+      async function loadOrderStatus() {
+        const statusResponse = await fetch(`/api/paypal/order-status?order_id=${encodeURIComponent(token)}`);
+        const statusData = await statusResponse.json();
+
+        if (!statusResponse.ok) {
+          throw new Error(statusData.error || "PayPal Bestellung konnte nicht gelesen werden.");
+        }
+
+        return statusData;
       }
 
       run();

@@ -4,7 +4,8 @@ const RESULT_CONTENT = window.NORYS_RESULT_CONTENT || {};
 const result = getStoredResult();
 const content = RESULT_CONTENT[result.type] || RESULT_CONTENT.overthinker;
 const checkoutButton = document.getElementById("ebookCheckoutBtn");
-const payPalButton = document.getElementById("ebookPayPalBtn");
+const payPalContainer = document.getElementById("paypal-button-container");
+const payPalSection = document.querySelector(".ebook-paypal");
 
 hydratePage();
 initScrollAnimations();
@@ -183,52 +184,112 @@ function initCheckout() {
 }
 
 function initPayPalCheckout() {
-  if (!payPalButton) {
+  if (!payPalContainer || !payPalSection) {
     return;
   }
 
-  payPalButton.addEventListener("click", async (event) => {
-    event.preventDefault();
-    const originalLabel = payPalButton.textContent;
-
-    payPalButton.style.pointerEvents = "none";
-    payPalButton.textContent = "Weiterleitung...";
-
-    try {
-      if (!/^https?:$/.test(window.location.protocol)) {
-        throw new Error("Oeffne die Seite ueber deine Live-URL oder localhost, nicht direkt als lokale Datei.");
-      }
-
-      const endpoint = new URL("/api/paypal/create-order", window.location.origin).toString();
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          resultType: result.type,
-        }),
-      });
-
-      const rawText = await response.text();
-      let data = {};
-
-      try {
-        data = rawText ? JSON.parse(rawText) : {};
-      } catch (_error) {
-        data = { error: rawText || "PayPal Checkout konnte nicht gestartet werden." };
-      }
-
-      if (!response.ok || !data.approveUrl) {
-        const fallbackMessage = `PayPal Checkout konnte nicht gestartet werden (HTTP ${response.status}).`;
-        throw new Error(data.error || fallbackMessage);
-      }
-
-      window.location.assign(data.approveUrl);
-    } catch (error) {
-      payPalButton.textContent = originalLabel;
-      payPalButton.style.pointerEvents = "";
-      window.alert(error instanceof Error ? error.message : "PayPal Checkout konnte nicht gestartet werden.");
-    }
+  setupPayPalButtons().catch((error) => {
+    payPalSection.hidden = true;
+    console.error("PayPal button setup failed:", error);
   });
+}
+
+async function setupPayPalButtons() {
+  if (!/^https?:$/.test(window.location.protocol)) {
+    throw new Error("Oeffne die Seite ueber deine Live-URL oder localhost, nicht direkt als lokale Datei.");
+  }
+
+  const configResponse = await fetch(new URL("/api/paypal-config", window.location.origin).toString());
+  const configData = await configResponse.json();
+
+  if (!configResponse.ok || !configData.clientId) {
+    throw new Error(configData.error || "PayPal ist aktuell nicht verfuegbar.");
+  }
+
+  await loadPayPalSdk(configData.clientId);
+  renderPayPalButtons();
+}
+
+function loadPayPalSdk(clientId) {
+  if (window.paypal?.Buttons) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=EUR&intent=capture&components=buttons&disable-funding=card`;
+    script.async = true;
+    script.onload = () => {
+      if (window.paypal?.Buttons) {
+        resolve();
+        return;
+      }
+
+      reject(new Error("PayPal konnte nicht geladen werden."));
+    };
+    script.onerror = () => reject(new Error("PayPal konnte nicht geladen werden."));
+    document.head.appendChild(script);
+  });
+}
+
+function renderPayPalButtons() {
+  if (!window.paypal?.Buttons || !payPalContainer) {
+    throw new Error("PayPal konnte nicht geladen werden.");
+  }
+
+  window.paypal
+    .Buttons({
+      fundingSource: window.paypal.FUNDING.PAYPAL,
+      style: {
+        layout: "vertical",
+        shape: "pill",
+        label: "paypal",
+        color: "gold",
+        height: 48,
+      },
+      createOrder: async () => {
+        const response = await fetch(new URL("/api/paypal/create-order", window.location.origin).toString(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            resultType: result.type,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.orderId) {
+          throw new Error(data.error || "PayPal Bestellung konnte nicht erstellt werden.");
+        }
+
+        return data.orderId;
+      },
+      onApprove: async (data) => {
+        const response = await fetch(new URL("/api/paypal/capture-order", window.location.origin).toString(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            orderId: data.orderID,
+          }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || "PayPal Zahlung konnte nicht bestaetigt werden.");
+        }
+
+        window.location.assign(`/paypal-success.html?token=${encodeURIComponent(data.orderID)}`);
+      },
+      onError: (error) => {
+        console.error("PayPal checkout failed:", error);
+        window.alert(error instanceof Error ? error.message : "PayPal Checkout konnte nicht gestartet werden.");
+      },
+      onCancel: () => {
+        window.location.assign("ebook.html");
+      },
+    })
+    .render("#paypal-button-container");
 }

@@ -54,12 +54,20 @@
   border-top: 1px solid rgba(17, 17, 17, 0.08);
 }
 
-.ebook-paypal-link {
-  width: fit-content;
-  color: #111;
+.ebook-paypal {
+  display: grid;
+  gap: 10px;
+}
+
+.ebook-paypal__label {
+  margin: 0;
+  color: rgba(17, 17, 17, 0.72);
   font-size: 0.92rem;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  line-height: 1.4;
+}
+
+#paypal-button-container {
+  min-height: 48px;
 }
 
 @media (min-width: 720px) {
