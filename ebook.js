@@ -9,10 +9,10 @@ const payPalSection = document.querySelector(".ebook-paypal");
 const heroCover = document.getElementById("ebookHeroCover");
 
 const EBOOK_COVERS = {
-  overthinker: "assets/covers/Grublerin.png",
-  emotionalInitiator: "assets/covers/emotionaleInitiatorin.png",
-  conflictAvoider: "assets/covers/konfliktvermeiderin.png",
-  adapter: "assets/covers/Anpassende.png",
+  overthinker: "https://drive.google.com/uc?export=view&id=16SW8hTcm-RhDqK3FsG4hQN7nePPvjqie",
+  emotionalInitiator: "https://drive.google.com/uc?export=view&id=1ZQzG2Q4OIixaRO_PD9tONT8jWC8quBpH",
+  conflictAvoider: "https://drive.google.com/uc?export=view&id=1oAwIKasRSoIUhFjWNPHf33C6lXzm6gcH",
+  adapter: "https://drive.google.com/uc?export=view&id=1cEbGmsohAlhu-ifqaVkcogv5KZIlZjuj",
 };
 
 hydratePage();
