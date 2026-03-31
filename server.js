@@ -55,6 +55,7 @@ const PRODUCTS = {
 };
 
 app.use(express.json());
+app.use("/covers", express.static(path.join(__dirname, "covers")));
 app.use(express.static(__dirname));
 
 function normalizeBaseUrl(value) {
@@ -652,5 +653,8 @@ app.get("/api/download-ebook-paypal", async (request, response) => {
 });
 
 app.listen(port, () => {
+  const coversPath = path.join(__dirname, "covers");
+  const coverFiles = fs.existsSync(coversPath) ? fs.readdirSync(coversPath).filter((file) => file.endsWith(".png")) : [];
+  console.log(`Covers directory: ${coversPath} (${coverFiles.length} png files)`);
   console.log(`Norys server running on ${normalizeBaseUrl(baseUrl) || `http://localhost:${port}`}`);
 });
