@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
@@ -19,6 +20,9 @@ const paypalApiBase =
   paypalEnv === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 
 const RESULT_STORAGE_KEY = "norysResult";
+const DOWNLOAD_GRANT_COOKIE = "norys_download_grant";
+const DOWNLOAD_GRANT_TTL_MS = 15 * 60 * 1000;
+const downloadGrants = new Map();
 
 const PRODUCTS = {
   overthinker: {
@@ -87,6 +91,92 @@ function getPublicBaseUrl(request) {
 
 function buildAbsoluteUrl(base, pathnameWithSearch) {
   return new URL(pathnameWithSearch, `${base}/`).toString();
+}
+
+function parseCookies(request) {
+  const rawCookie = request.headers.cookie || "";
+  return rawCookie.split(";").reduce((cookies, part) => {
+    const [rawName, ...rawValue] = part.trim().split("=");
+    if (!rawName) {
+      return cookies;
+    }
+
+    cookies[rawName] = decodeURIComponent(rawValue.join("=") || "");
+    return cookies;
+  }, {});
+}
+
+function isSecureRequest(request) {
+  const forwardedProto = request.headers["x-forwarded-proto"];
+  const protocol = typeof forwardedProto === "string" && forwardedProto
+    ? forwardedProto.split(",")[0].trim()
+    : request.protocol;
+
+  return protocol === "https";
+}
+
+function buildCookieOptions(request) {
+  return {
+    httpOnly: true,
+    secure: isSecureRequest(request),
+    sameSite: "lax",
+    path: "/",
+    maxAge: DOWNLOAD_GRANT_TTL_MS,
+  };
+}
+
+function cleanupExpiredDownloadGrants() {
+  const now = Date.now();
+  for (const [token, grant] of downloadGrants.entries()) {
+    if (!grant || grant.expiresAt <= now || grant.usedAt) {
+      downloadGrants.delete(token);
+    }
+  }
+}
+
+function issueDownloadGrant(request, response, payload) {
+  cleanupExpiredDownloadGrants();
+
+  const token = crypto.randomBytes(32).toString("hex");
+  downloadGrants.set(token, {
+    ...payload,
+    expiresAt: Date.now() + DOWNLOAD_GRANT_TTL_MS,
+    usedAt: null,
+  });
+
+  response.cookie(DOWNLOAD_GRANT_COOKIE, token, buildCookieOptions(request));
+  return token;
+}
+
+function consumeDownloadGrant(request, response, expectedProvider) {
+  cleanupExpiredDownloadGrants();
+
+  const token = typeof request.query.download_token === "string" ? request.query.download_token : "";
+  const cookies = parseCookies(request);
+  const cookieToken = cookies[DOWNLOAD_GRANT_COOKIE] || "";
+  const grant = token ? downloadGrants.get(token) : null;
+
+  if (!token || !cookieToken || token !== cookieToken || !grant) {
+    response.status(403).send("This download link is not valid for this browser.");
+    return null;
+  }
+
+  if (grant.usedAt || grant.expiresAt <= Date.now()) {
+    downloadGrants.delete(token);
+    response.clearCookie(DOWNLOAD_GRANT_COOKIE, buildCookieOptions(request));
+    response.status(403).send("This download link has expired.");
+    return null;
+  }
+
+  if (grant.provider !== expectedProvider) {
+    response.status(403).send("This download link does not match this payment.");
+    return null;
+  }
+
+  grant.usedAt = Date.now();
+  downloadGrants.set(token, grant);
+  response.clearCookie(DOWNLOAD_GRANT_COOKIE, buildCookieOptions(request));
+  return grant;
 }
 
 async function getPayPalAccessToken() {
@@ -226,7 +316,16 @@ app.get("/api/checkout-session", async (request, response) => {
       paymentStatus: session.payment_status,
       resultType,
       productName: product?.name || "",
-      downloadUrl: session.payment_status === "paid" ? `/api/download-ebook?session_id=${encodeURIComponent(sessionId)}` : "",
+      downloadUrl:
+        session.payment_status === "paid"
+          ? `/api/download-ebook?download_token=${encodeURIComponent(
+              issueDownloadGrant(request, response, {
+                provider: "stripe",
+                sourceId: sessionId,
+                resultType,
+              }),
+            )}`
+          : "",
     });
   } catch (error) {
     console.error("Stripe checkout session fetch failed:", error);
@@ -242,14 +341,19 @@ app.get("/api/download-ebook", async (request, response) => {
     return;
   }
 
-  const sessionId = request.query.session_id;
-  if (typeof sessionId !== "string" || !sessionId) {
-    response.status(400).send("Missing session_id.");
+  if (typeof request.query.download_token !== "string" || !request.query.download_token) {
+    response.status(400).send("Missing download token.");
     return;
   }
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const grant = consumeDownloadGrant(request, response, "stripe");
+
+    if (!grant) {
+      return;
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(grant.sourceId);
     if (session.payment_status !== "paid") {
       response.status(403).send("This payment is not completed.");
       return;
@@ -379,7 +483,16 @@ app.get("/api/paypal/order-status", async (request, response) => {
       captureStatus,
       resultType,
       productName: product?.name || "",
-      downloadUrl: isPaid ? `/api/download-ebook-paypal?order_id=${encodeURIComponent(order.id)}` : "",
+      downloadUrl:
+        isPaid
+          ? `/api/download-ebook-paypal?download_token=${encodeURIComponent(
+              issueDownloadGrant(request, response, {
+                provider: "paypal",
+                sourceId: order.id,
+                resultType,
+              }),
+            )}`
+          : "",
     });
   } catch (error) {
     console.error("PayPal order status failed:", error);
@@ -391,13 +504,18 @@ app.get("/api/paypal/order-status", async (request, response) => {
 
 app.get("/api/download-ebook-paypal", async (request, response) => {
   try {
-    const orderId = request.query.order_id;
-    if (typeof orderId !== "string" || !orderId) {
-      response.status(400).send("Missing order_id.");
+    if (typeof request.query.download_token !== "string" || !request.query.download_token) {
+      response.status(400).send("Missing download token.");
       return;
     }
 
-    const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+    const grant = consumeDownloadGrant(request, response, "paypal");
+
+    if (!grant) {
+      return;
+    }
+
+    const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(grant.sourceId)}`, {
       method: "GET",
     });
 
