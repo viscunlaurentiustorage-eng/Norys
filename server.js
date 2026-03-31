@@ -23,25 +23,25 @@ const RESULT_STORAGE_KEY = "norysResult";
 const PRODUCTS = {
   overthinker: {
     name: "Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe",
-    amount: 999,
+    amount: 99,
     currency: "eur",
     fileName: "overthinker-ebook.pdf",
   },
   emotionalInitiator: {
     name: "Die emotionale Antreiberin: Naehe schaffen ohne Druck",
-    amount: 999,
+    amount: 99,
     currency: "eur",
     fileName: "emotional-initiator-ebook.pdf",
   },
   conflictAvoider: {
     name: "Die Konfliktvermeiderin: Klar sprechen ohne Eskalation",
-    amount: 999,
+    amount: 99,
     currency: "eur",
     fileName: "conflict-avoider-ebook.pdf",
   },
   adapter: {
     name: "Die Anpasserin: Grenzen setzen ohne Schuldgefuehl",
-    amount: 999,
+    amount: 99,
     currency: "eur",
     fileName: "adapter-ebook.pdf",
   },
