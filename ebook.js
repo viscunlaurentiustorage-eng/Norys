@@ -9,10 +9,10 @@ const payPalSection = document.querySelector(".ebook-paypal");
 const heroCover = document.getElementById("ebookHeroCover");
 
 const EBOOK_COVERS = {
-  overthinker: "covers/Die Gru%CC%88blerin.png",
-  emotionalInitiator: "covers/Die emotionale Initiatorin.png",
-  conflictAvoider: "covers/Die Konfliktvermeiderin.png",
-  adapter: "covers/Die Anpassende.png",
+  overthinker: "covers/overthinker-cover.png",
+  emotionalInitiator: "covers/emotional-initiator-cover.png",
+  conflictAvoider: "covers/conflict-avoider-cover.png",
+  adapter: "covers/adapter-cover.png",
 };
 
 hydratePage();
