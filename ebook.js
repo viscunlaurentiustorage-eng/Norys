@@ -6,6 +6,14 @@ const content = RESULT_CONTENT[result.type] || RESULT_CONTENT.overthinker;
 const checkoutButton = document.getElementById("ebookCheckoutBtn");
 const payPalContainer = document.getElementById("paypal-button-container");
 const payPalSection = document.querySelector(".ebook-paypal");
+const heroCover = document.getElementById("ebookHeroCover");
+
+const EBOOK_COVERS = {
+  overthinker: "covers/Die Gru%CC%88blerin.png",
+  emotionalInitiator: "covers/Die emotionale Initiatorin.png",
+  conflictAvoider: "covers/Die Konfliktvermeiderin.png",
+  adapter: "covers/Die Anpassende.png",
+};
 
 hydratePage();
 initScrollAnimations();
@@ -31,13 +39,23 @@ function getStoredResult() {
 
 function hydratePage() {
   setText("ebookHeroTitle", content.ebookTitle);
-  setText("ebookHeroSubtitle", content.heroSubtitle);
-  setText("ebookIntroText", content.offerDescription);
+  setText("ebookHeroSubtitle", content.ebookHeroSubtitle || content.heroSubtitle);
+  setText("ebookIntroText", content.ebookIntroDescription || content.offerDescription);
   setText("ebookOfferDescription", content.offerDescription);
+  updateHeroCover();
 
   renderList("ebookOutcomeList", content.outcomes);
   renderList("ebookIncludesList", content.ebookIncludes || content.outcomes);
   renderTestimonials();
+}
+
+function updateHeroCover() {
+  if (!heroCover) {
+    return;
+  }
+
+  heroCover.src = EBOOK_COVERS[result.type] || EBOOK_COVERS.overthinker;
+  heroCover.alt = `${content.ebookTitle} Cover`;
 }
 
 function renderList(id, items) {
@@ -189,8 +207,10 @@ function initPayPalCheckout() {
   }
 
   setupPayPalButtons().catch((error) => {
-    payPalSection.hidden = true;
     console.error("PayPal button setup failed:", error);
+    showPayPalUnavailable(
+      error instanceof Error ? error.message : "PayPal ist gerade nicht verfuegbar.",
+    );
   });
 }
 
@@ -200,7 +220,7 @@ async function setupPayPalButtons() {
   }
 
   const configResponse = await fetch(new URL("/api/paypal-config", window.location.origin).toString());
-  const configData = await configResponse.json();
+  const configData = await readJsonResponse(configResponse, "PayPal Konfiguration konnte nicht geladen werden.");
 
   if (!configResponse.ok || !configData.clientId) {
     throw new Error(configData.error || "PayPal ist aktuell nicht verfuegbar.");
@@ -258,7 +278,7 @@ function renderPayPalButtons() {
           }),
         });
 
-        const data = await response.json();
+        const data = await readJsonResponse(response, "PayPal Bestellung konnte nicht erstellt werden.");
         if (!response.ok || !data.orderId) {
           throw new Error(data.error || "PayPal Bestellung konnte nicht erstellt werden.");
         }
@@ -276,7 +296,7 @@ function renderPayPalButtons() {
           }),
         });
 
-        const payload = await response.json();
+        const payload = await readJsonResponse(response, "PayPal Zahlung konnte nicht bestaetigt werden.");
         if (!response.ok) {
           throw new Error(payload.error || "PayPal Zahlung konnte nicht bestaetigt werden.");
         }
@@ -292,4 +312,26 @@ function renderPayPalButtons() {
       },
     })
     .render("#paypal-button-container");
+}
+
+function showPayPalUnavailable(message) {
+  if (!payPalContainer || !payPalSection) {
+    return;
+  }
+
+  payPalSection.hidden = false;
+  payPalContainer.innerHTML = `<p class="ebook-paypal__error">${message}</p>`;
+}
+
+async function readJsonResponse(response, fallbackMessage) {
+  const rawText = await response.text();
+
+  try {
+    return rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    const compactText = rawText.replace(/\s+/g, " ").trim();
+    return {
+      error: compactText || fallbackMessage,
+    };
+  }
 }

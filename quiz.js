@@ -7,6 +7,29 @@ const TYPE_LABELS = {
   adapter: "Die Anpasserin",
 };
 
+const DIMENSION_WEIGHTS_BY_TYPE = {
+  overthinker: {
+    rumination: 2,
+    hyperResponsibility: 2,
+    uncertaintySensitivity: 1,
+  },
+  emotionalInitiator: {
+    clarityUrgency: 2,
+    repairPressure: 2,
+    emotionalActivation: 1,
+  },
+  conflictAvoider: {
+    selfSilencing: 2,
+    withdrawal: 2,
+    tensionAvoidance: 1,
+  },
+  adapter: {
+    harmonyKeeping: 2,
+    selfAbandonment: 2,
+    emotionalCaretaking: 1,
+  },
+};
+
 const QUESTIONS = [
   {
     id: "q1",
@@ -234,6 +257,21 @@ function persistResult() {
     conflictAvoider: 0,
     adapter: 0,
   };
+  const dimensions = {
+    rumination: 0,
+    hyperResponsibility: 0,
+    uncertaintySensitivity: 0,
+    clarityUrgency: 0,
+    repairPressure: 0,
+    emotionalActivation: 0,
+    selfSilencing: 0,
+    withdrawal: 0,
+    tensionAvoidance: 0,
+    harmonyKeeping: 0,
+    selfAbandonment: 0,
+    emotionalCaretaking: 0,
+  };
+  const selectedAnswers = [];
 
   QUESTIONS.forEach((question) => {
     const selectedAnswerId = state.answers[question.id];
@@ -241,6 +279,18 @@ function persistResult() {
 
     if (selectedAnswer) {
       scores[selectedAnswer.type] += 1;
+      selectedAnswers.push({
+        questionId: question.id,
+        questionText: question.text,
+        answerId: selectedAnswer.id,
+        answerLabel: selectedAnswer.label,
+        type: selectedAnswer.type,
+      });
+
+      const dimensionWeights = DIMENSION_WEIGHTS_BY_TYPE[selectedAnswer.type] || {};
+      Object.entries(dimensionWeights).forEach(([dimension, weight]) => {
+        dimensions[dimension] = (dimensions[dimension] || 0) + weight;
+      });
     }
   });
 
@@ -255,6 +305,8 @@ function persistResult() {
     type: topType,
     typeLabel: TYPE_LABELS[topType],
     scores,
+    dimensions,
+    selectedAnswers,
     confidence,
     createdAt: Date.now(),
   };
