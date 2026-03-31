@@ -9,10 +9,10 @@ const payPalSection = document.querySelector(".ebook-paypal");
 const heroCover = document.getElementById("ebookHeroCover");
 
 const EBOOK_COVERS = {
-  overthinker: "covers/overthinker-cover.png",
-  emotionalInitiator: "covers/emotional-initiator-cover.png",
-  conflictAvoider: "covers/conflict-avoider-cover.png",
-  adapter: "covers/adapter-cover.png",
+  overthinker: "assets/covers/Grublerin.png",
+  emotionalInitiator: "assets/covers/emotionaleInitiatorin.png",
+  conflictAvoider: "assets/covers/konfliktvermeiderin.png",
+  adapter: "assets/covers/Anpassende.png",
 };
 
 hydratePage();
