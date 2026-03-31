@@ -22,7 +22,10 @@ const paypalApiBase =
 const RESULT_STORAGE_KEY = "norysResult";
 const DOWNLOAD_GRANT_COOKIE = "norys_download_grant";
 const DOWNLOAD_GRANT_TTL_MS = 15 * 60 * 1000;
+const PURCHASE_FLOW_COOKIE = "norys_purchase_flow";
+const PURCHASE_FLOW_TTL_MS = 60 * 60 * 1000;
 const downloadGrants = new Map();
+const purchaseFlows = new Map();
 
 const PRODUCTS = {
   overthinker: {
@@ -132,6 +135,69 @@ function cleanupExpiredDownloadGrants() {
       downloadGrants.delete(token);
     }
   }
+}
+
+function cleanupExpiredPurchaseFlows() {
+  const now = Date.now();
+  for (const [token, flow] of purchaseFlows.entries()) {
+    if (!flow || flow.expiresAt <= now || flow.usedAt) {
+      purchaseFlows.delete(token);
+    }
+  }
+}
+
+function issuePurchaseFlow(request, response, payload) {
+  cleanupExpiredPurchaseFlows();
+
+  const token = crypto.randomBytes(32).toString("hex");
+  purchaseFlows.set(token, {
+    ...payload,
+    expiresAt: Date.now() + PURCHASE_FLOW_TTL_MS,
+    usedAt: null,
+  });
+
+  response.cookie(PURCHASE_FLOW_COOKIE, token, {
+    ...buildCookieOptions(request),
+    maxAge: PURCHASE_FLOW_TTL_MS,
+  });
+
+  return token;
+}
+
+function validatePurchaseFlow(request, response, expected) {
+  cleanupExpiredPurchaseFlows();
+
+  const cookies = parseCookies(request);
+  const cookieToken = cookies[PURCHASE_FLOW_COOKIE] || "";
+  const flow = cookieToken ? purchaseFlows.get(cookieToken) : null;
+
+  if (!cookieToken || !flow) {
+    response.status(403).json({ error: "This payment confirmation is not valid for this browser." });
+    return null;
+  }
+
+  if (flow.usedAt || flow.expiresAt <= Date.now()) {
+    purchaseFlows.delete(cookieToken);
+    response.clearCookie(PURCHASE_FLOW_COOKIE, buildCookieOptions(request));
+    response.status(403).json({ error: "This payment confirmation has expired." });
+    return null;
+  }
+
+  if (flow.provider !== expected.provider || flow.sourceId !== expected.sourceId) {
+    response.status(403).json({ error: "This payment confirmation does not match this order." });
+    return null;
+  }
+
+  return { token: cookieToken, flow };
+}
+
+function revokePurchaseFlow(token, request, response) {
+  if (!token) {
+    return;
+  }
+
+  purchaseFlows.delete(token);
+  response.clearCookie(PURCHASE_FLOW_COOKIE, buildCookieOptions(request));
 }
 
 function issueDownloadGrant(request, response, payload) {
@@ -283,6 +349,12 @@ app.post("/api/create-checkout-session", async (request, response) => {
       cancel_url: cancelUrl,
     });
 
+    issuePurchaseFlow(request, response, {
+      provider: "stripe",
+      sourceId: session.id,
+      resultType,
+    });
+
     response.json({ url: session.url });
   } catch (error) {
     console.error("Stripe checkout session failed:", error);
@@ -307,9 +379,19 @@ app.get("/api/checkout-session", async (request, response) => {
   }
 
   try {
+    const purchaseFlow = validatePurchaseFlow(request, response, {
+      provider: "stripe",
+      sourceId: sessionId,
+    });
+
+    if (!purchaseFlow) {
+      return;
+    }
+
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const resultType = session.metadata?.resultType || "";
     const product = PRODUCTS[resultType];
+    revokePurchaseFlow(purchaseFlow.token, request, response);
 
     response.json({
       customerEmail: session.customer_details?.email || "",
@@ -322,7 +404,7 @@ app.get("/api/checkout-session", async (request, response) => {
               issueDownloadGrant(request, response, {
                 provider: "stripe",
                 sourceId: sessionId,
-                resultType,
+                resultType: purchaseFlow.resultType || resultType,
               }),
             )}`
           : "",
@@ -421,6 +503,12 @@ app.post("/api/paypal/create-order", async (request, response) => {
 
     const approveLink = order.links?.find((link) => link.rel === "approve")?.href || "";
 
+    issuePurchaseFlow(request, response, {
+      provider: "paypal",
+      sourceId: order.id,
+      resultType,
+    });
+
     response.json({
       orderId: order.id,
       approveUrl: approveLink,
@@ -467,6 +555,15 @@ app.get("/api/paypal/order-status", async (request, response) => {
       return;
     }
 
+    const purchaseFlow = validatePurchaseFlow(request, response, {
+      provider: "paypal",
+      sourceId: orderId,
+    });
+
+    if (!purchaseFlow) {
+      return;
+    }
+
     const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
       method: "GET",
     });
@@ -476,6 +573,10 @@ app.get("/api/paypal/order-status", async (request, response) => {
     const captureStatus =
       order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
     const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
+
+    if (isPaid) {
+      revokePurchaseFlow(purchaseFlow.token, request, response);
+    }
 
     response.json({
       orderId: order.id,
@@ -489,7 +590,7 @@ app.get("/api/paypal/order-status", async (request, response) => {
               issueDownloadGrant(request, response, {
                 provider: "paypal",
                 sourceId: order.id,
-                resultType,
+                resultType: purchaseFlow.resultType || resultType,
               }),
             )}`
           : "",
