@@ -30,25 +30,25 @@ const purchaseFlows = new Map();
 const PRODUCTS = {
   overthinker: {
     name: "Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe",
-    amount: 99,
+    amount: 999,
     currency: "eur",
     fileName: "overthinker-ebook.pdf",
   },
   emotionalInitiator: {
     name: "Die emotionale Antreiberin: Naehe schaffen ohne Druck",
-    amount: 99,
+    amount: 999,
     currency: "eur",
     fileName: "emotional-initiator-ebook.pdf",
   },
   conflictAvoider: {
     name: "Die Konfliktvermeiderin: Klar sprechen ohne Eskalation",
-    amount: 99,
+    amount: 999,
     currency: "eur",
     fileName: "conflict-avoider-ebook.pdf",
   },
   adapter: {
     name: "Die Anpasserin: Grenzen setzen ohne Schuldgefuehl",
-    amount: 99,
+    amount: 999,
     currency: "eur",
     fileName: "adapter-ebook.pdf",
   },
