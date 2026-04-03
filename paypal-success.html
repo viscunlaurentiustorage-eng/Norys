@@ -114,6 +114,7 @@
       </section>
     </main>
 
+    <script src="assets/tracker.js"></script>
     <script>
       const LANGUAGE_STORAGE_KEY = "norysLanguage";
       const UI_TEXT = {
@@ -163,6 +164,7 @@
         },
       };
 
+      const tracker = window.NorysTracker || null;
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
       const pageTitle = document.getElementById("pageTitle");
@@ -230,6 +232,22 @@
             </a>
             <a class="paypal-success-link" href="ebook.html">${ui.backLink}</a>
           `;
+          const downloadButton = paypalSuccessActions.querySelector(".cta");
+          if (downloadButton && tracker && latestData.orderId) {
+            downloadButton.addEventListener(
+              "click",
+              () => {
+                tracker.pushDownloadButtonClicked(
+                  {
+                    order_id: latestData.orderId,
+                    payment_provider: "paypal",
+                  },
+                  latestData.quizSessionId || tracker.getQuizSessionId(),
+                );
+              },
+              { once: true },
+            );
+          }
           return;
         }
 
@@ -277,7 +295,22 @@
             state: "success",
             productName: statusData.productName,
             downloadUrl: statusData.downloadUrl,
+            orderId: statusData.referenceId || tracker?.getOrderId() || "",
+            quizSessionId: tracker?.getQuizSessionId() || "",
           };
+          if (tracker && latestData.orderId) {
+            tracker.setCurrentOrder({
+              order_id: latestData.orderId,
+              payment_provider: "paypal",
+            });
+            tracker.pushDownloadPageOpened(
+              {
+                order_id: latestData.orderId,
+                payment_provider: "paypal",
+              },
+              latestData.quizSessionId,
+            );
+          }
           applyLanguage();
         } catch (error) {
           latestData = { state: "error", error: error.message || getUi().fetchError };

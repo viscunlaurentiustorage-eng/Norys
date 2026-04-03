@@ -441,11 +441,13 @@ const progressText = document.getElementById("progressText");
 const questionText = document.getElementById("questionText");
 const answersContainer = document.getElementById("answersContainer");
 const liveRegion = document.getElementById("liveRegion");
+const tracker = window.NorysTracker || null;
 
 const state = {
   currentIndex: 0,
   answers: {},
   language: getStoredLanguage(),
+  quizSessionId: tracker ? tracker.startQuizSession() : "",
 };
 
 if (backBtn) {
@@ -461,6 +463,9 @@ if (resetBtn) {
 }
 
 applyLanguage();
+if (tracker && state.quizSessionId) {
+  tracker.pushQuizStarted(state.quizSessionId);
+}
 render();
 
 function getStoredLanguage() {
@@ -567,10 +572,18 @@ function render() {
   });
 
   liveRegion.textContent = `${ui.liveQuestionPrefix}: ${localizedQuestion.text}`;
+
+  if (tracker && state.quizSessionId) {
+    tracker.pushQuestionShown(state.quizSessionId, question.id);
+  }
 }
 
 function handleAnswerClick(questionId, answerId) {
   state.answers[questionId] = answerId;
+
+  if (tracker && state.quizSessionId) {
+    tracker.pushAnswerSelected(state.quizSessionId, questionId, answerId);
+  }
 
   if (state.currentIndex < QUESTIONS.length - 1) {
     state.currentIndex += 1;
@@ -590,8 +603,12 @@ function handleBack() {
 
 function handleResetClick(event) {
   event.preventDefault();
+  state.quizSessionId = tracker ? tracker.startQuizSession() : "";
   state.currentIndex = 0;
   state.answers = {};
+  if (tracker && state.quizSessionId) {
+    tracker.pushQuizStarted(state.quizSessionId);
+  }
   render();
 }
 
@@ -659,7 +676,13 @@ function persistResult() {
     selectedAnswers,
     confidence,
     createdAt: Date.now(),
+    quizSessionId: state.quizSessionId,
   };
 
   window.localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(payload));
+
+  if (tracker && state.quizSessionId) {
+    tracker.setQuizSessionId(state.quizSessionId);
+    tracker.pushQuizCompleted(state.quizSessionId, topType);
+  }
 }

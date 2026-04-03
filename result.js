@@ -4,6 +4,7 @@ const OFFER_DEADLINE_STORAGE_KEY = "norysOfferDeadlineAt";
 const RESULT_CONTENT_DE = window.NORYS_RESULT_CONTENT || {};
 const OFFER_DURATION_MS = ((4 * 24) + 16) * 60 * 60 * 1000 + 34 * 60 * 1000;
 let offerTimerId = null;
+const tracker = window.NorysTracker || null;
 
 const RESULT_CONTENT_EN = {
   overthinker: {
@@ -981,4 +982,20 @@ initScrollAnimations();
 const languageToggle = document.getElementById("languageToggle");
 if (languageToggle) {
   languageToggle.addEventListener("click", handleLanguageToggle);
+}
+
+const offerCta = document.getElementById("offerCta");
+if (offerCta) {
+  offerCta.addEventListener("click", () => {
+    if (tracker) {
+      tracker.pushOfferButtonClicked(result.quizSessionId || tracker.getQuizSessionId(), result.type);
+    }
+  });
+}
+
+if (tracker) {
+  if (result.quizSessionId) {
+    tracker.setQuizSessionId(result.quizSessionId);
+  }
+  tracker.pushResultShown(result.quizSessionId || tracker.getQuizSessionId(), result.type);
 }

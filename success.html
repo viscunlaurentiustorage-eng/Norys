@@ -114,6 +114,7 @@
       </section>
     </main>
 
+    <script src="assets/tracker.js"></script>
     <script>
       const LANGUAGE_STORAGE_KEY = "norysLanguage";
       const UI_TEXT = {
@@ -175,6 +176,7 @@
       const successCopy = document.getElementById("successCopy");
       const successStatus = document.getElementById("successStatus");
       const successActions = document.getElementById("successActions");
+      const tracker = window.NorysTracker || null;
       let currentLanguage = getStoredLanguage();
       let latestData = null;
 
@@ -235,6 +237,19 @@
             </a>
             <a class="success-link" href="result.html">${ui.backLink}</a>
           `;
+
+          const downloadButton = successActions.querySelector(".cta");
+          if (downloadButton && tracker && latestData.orderId) {
+            downloadButton.addEventListener("click", () => {
+              tracker.pushDownloadButtonClicked(
+                {
+                  order_id: latestData.orderId,
+                  payment_provider: "stripe",
+                },
+                latestData.quizSessionId || tracker.getQuizSessionId(),
+              );
+            }, { once: true });
+          }
           return;
         }
 
@@ -274,7 +289,22 @@
               state: "success",
               productName: data.productName,
               downloadUrl: data.downloadUrl,
+              orderId: data.orderId || tracker?.getOrderId() || "",
+              quizSessionId: tracker?.getQuizSessionId() || "",
             };
+            if (tracker && latestData.orderId) {
+              tracker.setCurrentOrder({
+                order_id: latestData.orderId,
+                payment_provider: "stripe",
+              });
+              tracker.pushDownloadPageOpened(
+                {
+                  order_id: latestData.orderId,
+                  payment_provider: "stripe",
+                },
+                latestData.quizSessionId,
+              );
+            }
             applyLanguage();
           })
           .catch((error) => {

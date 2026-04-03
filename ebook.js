@@ -3,6 +3,7 @@ const LANGUAGE_STORAGE_KEY = "norysLanguage";
 const OFFER_DEADLINE_STORAGE_KEY = "norysOfferDeadlineAt";
 const RESULT_CONTENT_DE = window.NORYS_RESULT_CONTENT || {};
 const OFFER_DURATION_MS = ((4 * 24) + 16) * 60 * 60 * 1000 + 34 * 60 * 1000;
+const tracker = window.NorysTracker || null;
 
 const RESULT_CONTENT_EN = {
   overthinker: {
@@ -551,6 +552,11 @@ function initCheckout() {
         throw new Error(ui.localFileError);
       }
 
+      const order = tracker ? tracker.createOrder("stripe") : { order_id: "", payment_provider: "stripe" };
+      if (tracker && order.order_id) {
+        tracker.pushCheckoutStarted(order, result.quizSessionId || tracker.getQuizSessionId());
+      }
+
       const endpoint = new URL("/api/create-checkout-session", window.location.origin).toString();
       const response = await fetch(endpoint, {
         method: "POST",
@@ -560,6 +566,7 @@ function initCheckout() {
         body: JSON.stringify({
           resultType: result.type,
           language: currentLanguage,
+          orderId: order.order_id,
         }),
       });
 
@@ -660,6 +667,11 @@ function renderPayPalButtons() {
         height: 48,
       },
       createOrder: async () => {
+        const order = tracker ? tracker.createOrder("paypal") : { order_id: "", payment_provider: "paypal" };
+        if (tracker && order.order_id) {
+          tracker.pushCheckoutStarted(order, result.quizSessionId || tracker.getQuizSessionId());
+        }
+
         const response = await fetch(new URL("/api/paypal/create-order", window.location.origin).toString(), {
           method: "POST",
           headers: {
@@ -667,6 +679,8 @@ function renderPayPalButtons() {
           },
           body: JSON.stringify({
             resultType: result.type,
+            language: currentLanguage,
+            orderId: order.order_id,
           }),
         });
 
@@ -797,6 +811,10 @@ hydratePage();
 initScrollAnimations();
 initCheckout();
 initPayPalCheckout();
+
+if (tracker && result.quizSessionId) {
+  tracker.setQuizSessionId(result.quizSessionId);
+}
 
 const languageToggle = document.getElementById("languageToggle");
 if (languageToggle) {

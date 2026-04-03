@@ -344,6 +344,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
   try {
     const resultType = request.body?.resultType;
     const language = normalizeLanguage(request.body?.language);
+    const orderId = String(request.body?.orderId || "").trim();
     const product = PRODUCTS[resultType];
 
     if (!product) {
@@ -377,6 +378,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
       metadata: {
         resultType,
         language,
+        orderId,
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -387,6 +389,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
       sourceId: session.id,
       resultType,
       language,
+      orderId,
     });
 
     response.json({ url: session.url });
@@ -431,6 +434,7 @@ app.get("/api/checkout-session", async (request, response) => {
       customerEmail: session.customer_details?.email || "",
       paymentStatus: session.payment_status,
       resultType,
+      orderId: session.metadata?.orderId || "",
       productName: getProductName(product, session.metadata?.language || "de"),
       downloadUrl:
         session.payment_status === "paid"
@@ -500,6 +504,8 @@ app.get("/api/download-ebook", async (request, response) => {
 app.post("/api/paypal/create-order", async (request, response) => {
   try {
     const resultType = request.body?.resultType;
+    const language = normalizeLanguage(request.body?.language);
+    const orderId = String(request.body?.orderId || "").trim();
     const product = PRODUCTS[resultType];
 
     if (!product) {
@@ -518,6 +524,7 @@ app.post("/api/paypal/create-order", async (request, response) => {
         purchase_units: [
           {
             custom_id: resultType,
+            reference_id: orderId,
             description: getProductName(product, "de"),
             amount: {
               currency_code: product.currency.toUpperCase(),
@@ -541,6 +548,8 @@ app.post("/api/paypal/create-order", async (request, response) => {
       provider: "paypal",
       sourceId: order.id,
       resultType,
+      language,
+      orderId,
     });
 
     response.json({
@@ -572,6 +581,7 @@ app.post("/api/paypal/capture-order", async (request, response) => {
       orderId: capture.id,
       status: capture.status,
       resultType: capture.purchase_units?.[0]?.custom_id || "",
+      referenceId: capture.purchase_units?.[0]?.reference_id || "",
     });
   } catch (error) {
     console.error("PayPal capture order failed:", error);
@@ -583,26 +593,27 @@ app.post("/api/paypal/capture-order", async (request, response) => {
 
 app.get("/api/paypal/order-status", async (request, response) => {
   try {
-    const orderId = request.query.order_id;
-    if (typeof orderId !== "string" || !orderId) {
+    const paypalOrderId = request.query.order_id;
+    if (typeof paypalOrderId !== "string" || !paypalOrderId) {
       response.status(400).json({ error: "Missing order_id." });
       return;
     }
 
     const purchaseFlow = validatePurchaseFlow(request, response, {
       provider: "paypal",
-      sourceId: orderId,
+      sourceId: paypalOrderId,
     });
 
     if (!purchaseFlow) {
       return;
     }
 
-    const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}`, {
+    const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, {
       method: "GET",
     });
 
     const resultType = order.purchase_units?.[0]?.custom_id || "";
+    const referenceOrderId = order.purchase_units?.[0]?.reference_id || "";
     const product = PRODUCTS[resultType];
     const captureStatus =
       order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
@@ -614,10 +625,11 @@ app.get("/api/paypal/order-status", async (request, response) => {
 
     response.json({
       orderId: order.id,
+      referenceId: referenceOrderId,
       status: order.status,
       captureStatus,
       resultType,
-      productName: getProductName(product, "de"),
+      productName: getProductName(product, purchaseFlow.flow.language || "de"),
       downloadUrl:
         isPaid
           ? `/api/download-ebook-paypal?download_token=${encodeURIComponent(
