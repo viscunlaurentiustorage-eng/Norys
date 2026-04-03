@@ -1,43 +1,44 @@
 <!doctype html>
 <html lang="de">
   <head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KNJGK78M');</script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Beziehungs-Quiz | Norys</title>
+    <title id="pageTitle">Beziehungs-Quiz | Norys</title>
     <meta
+      id="metaDescription"
       name="description"
       content="Beantworte die Fragen im Norys Beziehungs-Quiz und entdecke dein unbewusstes Beziehungsmuster. Schnell, anonym und klar aufgebaut."
     />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#f7efe6" />
     <link rel="canonical" href="https://noryspsychologie.de/quiz.html" />
-    <meta property="og:locale" content="de_DE" />
+    <meta id="ogLocale" property="og:locale" content="de_DE" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Norys" />
-    <meta property="og:title" content="Beziehungs-Quiz | Norys" />
+    <meta id="ogTitle" property="og:title" content="Beziehungs-Quiz | Norys" />
     <meta
+      id="ogDescription"
       property="og:description"
       content="Starte das Norys Beziehungs-Quiz und finde heraus, welches Beziehungsmuster eure Naehe beeinflusst."
     />
     <meta property="og:url" content="https://noryspsychologie.de/quiz.html" />
     <meta property="og:image" content="https://noryspsychologie.de/LogoTransparent.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Beziehungs-Quiz | Norys" />
+    <meta id="twitterTitle" name="twitter:title" content="Beziehungs-Quiz | Norys" />
     <meta
+      id="twitterDescription"
       name="twitter:description"
       content="Beantworte die Fragen und erhalte dein persoenliches Beziehungsergebnis."
     />
     <meta name="twitter:image" content="https://noryspsychologie.de/LogoTransparent.png" />
     <link rel="icon" type="image/png" href="icon.png" />
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-QX97H3SPNS"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-F3FN7HRQE1');
-</script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -57,24 +58,28 @@
     <link rel="stylesheet" href="quiz.css" />
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KNJGK78M"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div class="quiz-top-stack">
       <header class="site-header">
         <div class="container header-shell">
           <div class="quiz-header-top">
-            <a class="brand" href="index.html" aria-label="Norys Startseite">
+            <a class="brand" href="index.html" aria-label="Norys Startseite" id="brandLink">
               <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
               <span class="brand__name">Norys</span>
             </a>
 
-            <button class="lang-pill" type="button" aria-label="Sprache wählen">
+            <button class="lang-pill" id="languageToggle" type="button" aria-label="Sprache wählen">
               <i class="fa-solid fa-globe" aria-hidden="true"></i>
-              <span>Deutsch</span>
+              <span id="languageLabel">Deutsch</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div class="quiz-subnav" aria-label="Quiz Navigation">
+      <div class="quiz-subnav" id="quizSubnav" aria-label="Quiz Navigation">
         <div class="container quiz-subnav__inner">
           <button class="header-btn" id="backBtn" type="button" aria-label="Zurück zur vorherigen Frage">
             <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
@@ -85,23 +90,24 @@
     </div>
 
     <main class="quiz-app">
-      <section class="quiz-panel" aria-label="Quiz">
-        <div class="quiz-question-hero">
-          <p class="quiz-question" id="questionText"></p>
+      <div class="quiz-desktop-shell">
+        <section class="quiz-panel" id="quizPanel" aria-label="Quiz">
+          <div class="quiz-question-hero">
+            <p class="quiz-question" id="questionText"></p>
+          </div>
+
+          <div class="quiz-answers" id="answersContainer" role="group" aria-label="Antwortoptionen"></div>
+        </section>
+
+        <div class="quiz-utilities">
+          <a class="cta quiz-reset-cta" id="resetBtn" href="quiz.html">
+            <span id="resetBtnText">Neu starten</span>
+            <span class="cta__arrow" aria-hidden="true">
+              <i class="fa-solid fa-rotate-right"></i>
+            </span>
+          </a>
         </div>
-
-        <div class="quiz-answers" id="answersContainer" role="group" aria-label="Antwortoptionen"></div>
-      </section>
-
-      <div class="quiz-utilities">
-        <a class="cta quiz-reset-cta" id="resetBtn" href="quiz.html">
-          Neu starten
-          <span class="cta__arrow" aria-hidden="true">
-            <i class="fa-solid fa-rotate-right"></i>
-          </span>
-        </a>
       </div>
-
 
       <p class="sr-only" id="liveRegion" aria-live="polite"></p>
     </main>

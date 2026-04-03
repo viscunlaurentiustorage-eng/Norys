@@ -29,25 +29,37 @@ const purchaseFlows = new Map();
 
 const PRODUCTS = {
   overthinker: {
-    name: "Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe",
+    name: {
+      de: "Die Überdenkerin: Raus aus dem Grübeln, rein in echte Nähe",
+      en: "The Overthinker: Out of Rumination, Back Into Real Closeness",
+    },
     amount: 999,
     currency: "eur",
     fileName: "overthinker-ebook.pdf",
   },
   emotionalInitiator: {
-    name: "Die emotionale Antreiberin: Naehe schaffen ohne Druck",
+    name: {
+      de: "Die emotionale Antreiberin: Nähe schaffen ohne Druck",
+      en: "The Emotional Initiator: Creating Closeness Without Pressure",
+    },
     amount: 999,
     currency: "eur",
     fileName: "emotional-initiator-ebook.pdf",
   },
   conflictAvoider: {
-    name: "Die Konfliktvermeiderin: Klar sprechen ohne Eskalation",
+    name: {
+      de: "Die Konfliktvermeiderin: Klar sprechen ohne Eskalation",
+      en: "The Conflict Avoider: Speaking Clearly Without Escalation",
+    },
     amount: 999,
     currency: "eur",
     fileName: "conflict-avoider-ebook.pdf",
   },
   adapter: {
-    name: "Die Anpasserin: Grenzen setzen ohne Schuldgefuehl",
+    name: {
+      de: "Die Anpasserin: Grenzen setzen ohne Schuldgefühl",
+      en: "The Adapter: Setting Boundaries Without Guilt",
+    },
     amount: 999,
     currency: "eur",
     fileName: "adapter-ebook.pdf",
@@ -94,6 +106,24 @@ function getPublicBaseUrl(request) {
 
 function buildAbsoluteUrl(base, pathnameWithSearch) {
   return new URL(pathnameWithSearch, `${base}/`).toString();
+}
+
+function normalizeLanguage(value) {
+  return String(value || "").toLowerCase() === "en" ? "en" : "de";
+}
+
+function getStripeLocale(language) {
+  return normalizeLanguage(language) === "en" ? "en" : "de";
+}
+
+function getProductName(product, language = "de") {
+  const normalizedLanguage = normalizeLanguage(language);
+
+  if (product?.name && typeof product.name === "object") {
+    return product.name[normalizedLanguage] || product.name.de || product.name.en || "";
+  }
+
+  return String(product?.name || "");
 }
 
 function parseCookies(request) {
@@ -313,6 +343,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
 
   try {
     const resultType = request.body?.resultType;
+    const language = normalizeLanguage(request.body?.language);
     const product = PRODUCTS[resultType];
 
     if (!product) {
@@ -329,6 +360,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
+      locale: getStripeLocale(language),
       payment_method_types: ["card"],
       line_items: [
         {
@@ -337,13 +369,14 @@ app.post("/api/create-checkout-session", async (request, response) => {
             currency: product.currency,
             unit_amount: product.amount,
             product_data: {
-              name: product.name,
+              name: getProductName(product, language),
             },
           },
         },
       ],
       metadata: {
         resultType,
+        language,
       },
       success_url: successUrl,
       cancel_url: cancelUrl,
@@ -353,6 +386,7 @@ app.post("/api/create-checkout-session", async (request, response) => {
       provider: "stripe",
       sourceId: session.id,
       resultType,
+      language,
     });
 
     response.json({ url: session.url });
@@ -397,7 +431,7 @@ app.get("/api/checkout-session", async (request, response) => {
       customerEmail: session.customer_details?.email || "",
       paymentStatus: session.payment_status,
       resultType,
-      productName: product?.name || "",
+      productName: getProductName(product, session.metadata?.language || "de"),
       downloadUrl:
         session.payment_status === "paid"
           ? `/api/download-ebook?download_token=${encodeURIComponent(
@@ -484,7 +518,7 @@ app.post("/api/paypal/create-order", async (request, response) => {
         purchase_units: [
           {
             custom_id: resultType,
-            description: product.name,
+            description: getProductName(product, "de"),
             amount: {
               currency_code: product.currency.toUpperCase(),
               value: (product.amount / 100).toFixed(2),
@@ -583,7 +617,7 @@ app.get("/api/paypal/order-status", async (request, response) => {
       status: order.status,
       captureStatus,
       resultType,
-      productName: product?.name || "",
+      productName: getProductName(product, "de"),
       downloadUrl:
         isPaid
           ? `/api/download-ebook-paypal?download_token=${encodeURIComponent(

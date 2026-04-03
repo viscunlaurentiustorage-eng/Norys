@@ -1,37 +1,37 @@
 <!doctype html>
 <html lang="de">
   <head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-KNJGK78M');</script>
+    <!-- End Google Tag Manager -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dein Ergebnis | Norys</title>
+    <title id="pageTitle">Dein Ergebnis | Norys</title>
     <meta
+      id="metaDescription"
       name="description"
-      content="Sieh dir dein persoenliches Norys Ergebnis an und verstehe, welches Beziehungsmuster gerade eure Naehe beeinflusst."
+      content="Sieh dir dein persönliches Norys Ergebnis an und verstehe, welches Beziehungsmuster gerade eure Nähe beeinflusst."
     />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#f7efe6" />
     <link rel="canonical" href="https://noryspsychologie.de/result.html" />
-    <meta property="og:locale" content="de_DE" />
+    <meta id="ogLocale" property="og:locale" content="de_DE" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Norys" />
-    <meta property="og:title" content="Dein Ergebnis | Norys" />
+    <meta id="ogTitle" property="og:title" content="Dein Ergebnis | Norys" />
     <meta
+      id="ogDescription"
       property="og:description"
-      content="Dein persoenliches Beziehungsergebnis von Norys."
+      content="Dein persönliches Beziehungsergebnis von Norys."
     />
     <meta property="og:url" content="https://noryspsychologie.de/result.html" />
     <meta property="og:image" content="https://noryspsychologie.de/LogoTransparent.png" />
     <meta name="twitter:card" content="summary" />
     <link rel="icon" type="image/png" href="icon.png" />
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-QX97H3SPNS"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-F3FN7HRQE1');
-</script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -48,16 +48,20 @@
     <link rel="stylesheet" href="result.css" />
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KNJGK78M"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <header class="site-header">
       <div class="container header-shell">
-        <a class="brand" href="index.html" aria-label="Norys Startseite">
+        <a class="brand" id="brandLink" href="index.html" aria-label="Norys Startseite">
           <img class="brand__logo" src="LogoTransparent.png" alt="Norys Logo" />
           <span class="brand__name">Norys</span>
         </a>
 
-        <button class="lang-pill" type="button" aria-label="Sprache wählen">
+        <button class="lang-pill" id="languageToggle" type="button" aria-label="Sprache wählen">
           <i class="fa-solid fa-globe" aria-hidden="true"></i>
-          <span>Deutsch</span>
+          <span id="languageLabel">Deutsch</span>
         </button>
       </div>
     </header>
@@ -67,9 +71,9 @@
         <div class="container">
           <div class="result-shell result-shell--hero">
             <div class="result-hero__content">
-              <h1 class="result-hero__title">Du bist die <span id="resultTypeName">Ueberdenkerin</span></h1>
+              <h1 class="result-hero__title"><span id="resultHeroPrefix">Du bist die</span> <span id="resultTypeName">Überdenkerin</span></h1>
               <p class="result-hero__subtitle" id="resultHeroSubtitle">
-                Du willst Sicherheit und Klarheit, geraetst dabei aber oft in inneren Druck.
+                Du willst Sicherheit und Klarheit, gerätst dabei aber oft in inneren Druck.
               </p>
             </div>
           </div>
@@ -80,7 +84,7 @@
         <div class="container">
           <div class="result-shell result-shell--copy">
             <div class="section-heading">
-              <h2 class="section-heading__title">Das wird sich fuer dich sofort echt anfuehlen</h2>
+              <h2 class="section-heading__title" id="identityHeading">Das wird sich für dich sofort echt anfühlen</h2>
             </div>
             <ul class="result-list" id="identityList"></ul>
           </div>
@@ -91,7 +95,7 @@
         <div class="container">
           <article class="result-shell result-card result-shell--copy">
             <div class="section-heading section-heading--compact">
-              <h2 class="section-heading__title">Genau hier beginnt oft die Distanz, die du eigentlich verhindern willst</h2>
+              <h2 class="section-heading__title" id="problemHeading">Genau hier beginnt oft die Distanz, die du eigentlich verhindern willst</h2>
             </div>
             <ul class="result-list result-list--tight" id="problemList"></ul>
           </article>
@@ -102,13 +106,13 @@
         <div class="container">
           <div class="result-shell">
             <div class="section-heading">
-              <h2 class="section-heading__title">So geht es fuer euch weiter</h2>
+              <h2 class="section-heading__title" id="futureHeading">So geht es für euch weiter</h2>
             </div>
 
             <div class="future-stack">
               <article class="result-card future-card future-card--stack" style="--stack-index: 1;">
                 <div class="future-card__head">
-                  <h3 class="future-card__title">Wenn alles so bleibt</h3>
+                  <h3 class="future-card__title" id="futureRiskHeading">Wenn alles so bleibt</h3>
                   <span class="future-card__icon" aria-hidden="true">
                     <i class="fa-solid fa-arrow-trend-down"></i>
                   </span>
@@ -118,7 +122,7 @@
 
               <article class="result-card future-card future-card--stack" style="--stack-index: 2;">
                 <div class="future-card__head">
-                  <h3 class="future-card__title">Wenn du dieses Muster durchbrichst</h3>
+                  <h3 class="future-card__title" id="futureGainHeading">Wenn du dieses Muster durchbrichst</h3>
                   <span class="future-card__icon" aria-hidden="true">
                     <i class="fa-solid fa-arrow-trend-up"></i>
                   </span>
@@ -135,9 +139,9 @@
           <div class="container">
             <div class="result-shell">
             <div class="offer-card__copy">
-              <h2 class="section-heading__title" id="ebookTitle">Die Ueberdenkerin: Raus aus dem Gruebeln, rein in echte Naehe</h2>
+              <h2 class="section-heading__title" id="ebookTitle">Die Überdenkerin: Raus aus dem Grübeln, rein in echte Nähe</h2>
               <p class="offer-card__text" id="offerDescription">
-                Dieses eBook zeigt dir, warum dein Muster entsteht und wie du es im Alltag konkret veraenderst.
+                Dieses eBook zeigt dir, warum dein Muster entsteht und wie du es im Alltag konkret veränderst.
               </p>
             </div>
 
@@ -145,13 +149,17 @@
 
             <div class="offer-action">
               <div class="pricing-inline">
-                <p class="pricing-inline__old">Statt <span id="oldPrice">29,90 EUR</span></p>
+                <p class="pricing-inline__old"><span id="oldPriceLabel">Statt</span> <span id="oldPrice">29,90 EUR</span></p>
                 <p class="pricing-inline__new"><span id="newPrice">9,99 EUR</span></p>
-                <p class="pricing-inline__hint">Nur passend zu deinem aktuellen Ergebnis freigeschaltet</p>
+                <p class="pricing-inline__hint" id="pricingHint">Nur noch kurz zu diesem Ergebnis-Preis verfügbar.</p>
+                <div class="offer-deadline" id="offerDeadline">
+                  <p class="offer-deadline__label" id="offerDeadlineLabel">Läuft ab in</p>
+                  <p class="offer-deadline__time" id="offerDeadlineTime">7 Tage 00:00:00</p>
+                </div>
               </div>
 
-              <a class="cta" href="ebook.html">
-                Ich will das endlich veraendern
+              <a class="cta" href="ebook.html" id="offerCta">
+                <span id="offerCtaText">Ich will das jetzt für mich lösen</span>
                 <span class="cta__arrow" aria-hidden="true">
                   <i class="fa-solid fa-arrow-right-long"></i>
                 </span>
@@ -167,7 +175,7 @@
           <div class="container">
             <div class="result-shell">
               <div class="section-heading section-heading--testimonials">
-                <h2 class="section-heading__title">Was Frauen sagen, nachdem sie ihr Muster erkannt haben</h2>
+                <h2 class="section-heading__title" id="testimonialsHeading">Was Frauen sagen, nachdem sie ihr Muster erkannt haben</h2>
               </div>
             </div>
           </div>
@@ -182,7 +190,7 @@
     </main>
 
     <script src="assets/result-content.js?v=20260330c"></script>
-    <script src="result.js?v=20260330c"></script>
+    <script src="result.js?v=20260403b"></script>
     <script src="assets/script.js?v=20260330b"></script>
   </body>
 </html>

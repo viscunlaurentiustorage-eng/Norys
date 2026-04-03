@@ -516,18 +516,36 @@ body{
 .site-footer__social{
   display:flex;
   align-items:center;
-  gap:clamp(12px, 1.8vw, 18px);
+  gap:0;
+  width:fit-content;
+  border-bottom:1px solid #fff;
+  padding-bottom:2px;
 }
 
 .site-footer__social a{
   color:#fff;
-  font-size:clamp(1.1rem, 2vw, 1.4rem);
+  font-size:clamp(1.28rem, 2.25vw, 1.62rem);
   line-height:1;
-  min-width:28px;
-  min-height:28px;
+  min-width:auto;
+  min-height:auto;
   display:inline-flex;
   align-items:center;
   justify-content:center;
+  text-decoration:none;
+  flex-shrink:0;
+}
+
+.site-footer__social-link{
+  text-decoration:none;
+}
+
+.site-footer__social-handle{
+  color:#fff;
+  font-family:"Montserrat", sans-serif;
+  font-size:clamp(.92rem, 1.25vw, 1.02rem);
+  font-weight:500;
+  line-height:1.2;
+  margin-left:2px;
 }
 
 .site-footer__bottom{
@@ -740,7 +758,7 @@ body{
   }
 
   .site-footer__social{
-    gap:14px;
+    gap:0;
   }
 
   .site-footer__social a{
