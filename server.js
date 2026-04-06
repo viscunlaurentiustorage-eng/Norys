@@ -20,11 +20,13 @@ const paypalApiBase =
   paypalEnv === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 const brevoApiKey = process.env.BREVO_API_KEY || "";
 const brevoListId = Number(process.env.BREVO_LIST_ID || 0);
-const brevoPaidEventName = process.env.BREVO_PAID_EVENT_NAME || "ebook_order_paid";
+const emailDownloadSecret =
+  process.env.EMAIL_DOWNLOAD_SECRET || stripeSecretKey || paypalClientSecret || "norys-change-this-download-secret";
 
 const RESULT_STORAGE_KEY = "norysResult";
 const DOWNLOAD_GRANT_COOKIE = "norys_download_grant";
 const DOWNLOAD_GRANT_TTL_MS = 15 * 60 * 1000;
+const EMAIL_DOWNLOAD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PURCHASE_FLOW_COOKIE = "norys_purchase_flow";
 const PURCHASE_FLOW_TTL_MS = 60 * 60 * 1000;
 const downloadGrants = new Map();
@@ -288,6 +290,59 @@ function getFulfillmentKey(provider, sourceId) {
   return `${provider}:${sourceId}`;
 }
 
+function buildEmailDownloadUrl(request, token) {
+  return buildAbsoluteUrl(
+    getPublicBaseUrl(request),
+    `/download-email-ebook?delivery_token=${encodeURIComponent(token)}`,
+  );
+}
+
+function issueEmailDownloadGrant(payload) {
+  const serializedPayload = Buffer.from(
+    JSON.stringify({
+      ...payload,
+      expiresAt: Date.now() + EMAIL_DOWNLOAD_TTL_MS,
+    }),
+  ).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", emailDownloadSecret)
+    .update(serializedPayload)
+    .digest("hex");
+
+  return `${serializedPayload}.${signature}`;
+}
+
+function readEmailDownloadGrant(token) {
+  if (!token || typeof token !== "string" || !token.includes(".")) {
+    return null;
+  }
+
+  const [serializedPayload, signature] = token.split(".");
+  const expectedSignature = crypto
+    .createHmac("sha256", emailDownloadSecret)
+    .update(serializedPayload)
+    .digest("hex");
+
+  if (
+    !signature
+    || signature.length !== expectedSignature.length
+    || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(serializedPayload, "base64url").toString("utf8"));
+    if (!payload?.expiresAt || payload.expiresAt <= Date.now()) {
+      return null;
+    }
+
+    return payload;
+  } catch (_error) {
+    return null;
+  }
+}
+
 async function brevoRequest(pathname, payload) {
   if (!brevoApiKey) {
     throw new Error("Brevo is not configured. Add BREVO_API_KEY to your environment.");
@@ -322,24 +377,17 @@ async function brevoRequest(pathname, payload) {
 
 async function syncPaidOrderToBrevo({
   email,
-  language,
   productName,
-  provider,
-  orderId,
   resultType,
   amount,
-  currency,
+  downloadUrl,
+  status,
 }) {
-  const normalizedLanguage = normalizeLanguage(language);
   const contactAttributes = {
-    EBOOK_KEY: resultType,
-    PRODUCT_NAME: productName,
-    RESULT_TYPE: resultType,
-    ORDER_ID: orderId,
-    PAYMENT_PROVIDER: provider,
-    LANGUAGE: normalizedLanguage,
-    ORDER_AMOUNT: Number((amount / 100).toFixed(2)),
-    ORDER_CURRENCY: String(currency || "").toUpperCase(),
+    PRODUCT: productName,
+    PRICE: Number((amount / 100).toFixed(2)),
+    STATUS: status,
+    LINK: downloadUrl,
   };
 
   const contactPayload = {
@@ -355,24 +403,6 @@ async function syncPaidOrderToBrevo({
   }
 
   await brevoRequest("/contacts", contactPayload);
-
-  await brevoRequest("/events", {
-    event_name: brevoPaidEventName,
-    identifiers: {
-      email_id: email,
-    },
-    contact_properties: contactAttributes,
-    event_properties: {
-      order_id: orderId,
-      payment_provider: provider,
-      result_type: resultType,
-      ebook_key: resultType,
-      product_name: productName,
-      language: normalizedLanguage,
-      amount: Number((amount / 100).toFixed(2)),
-      currency: String(currency || "").toUpperCase(),
-    },
-  });
 }
 
 async function fulfillPaidOrder(_request, payload) {
@@ -383,6 +413,7 @@ async function fulfillPaidOrder(_request, payload) {
     language,
     email,
     orderId,
+    request,
   } = payload;
 
   if (!email) {
@@ -401,21 +432,27 @@ async function fulfillPaidOrder(_request, payload) {
   }
 
   const productName = getProductName(product, language);
+  const deliveryToken = issueEmailDownloadGrant({
+    provider,
+    sourceId,
+    resultType,
+    email,
+  });
+  const downloadUrl = buildEmailDownloadUrl(request, deliveryToken);
 
   await syncPaidOrderToBrevo({
     email,
-    language,
     productName,
-    provider,
-    orderId,
     resultType,
     amount: product.amount,
-    currency: product.currency,
+    downloadUrl,
+    status: "paid",
   });
 
   const fulfillment = {
     email,
     productName,
+    downloadUrl,
     sentAt: Date.now(),
     orderId,
   };
@@ -633,6 +670,7 @@ app.get("/stripe-complete", async (request, response) => {
     }
 
     await fulfillPaidOrder(request, {
+      request,
       provider: "stripe",
       sourceId: sessionId,
       resultType: session.metadata?.resultType || purchaseFlow.flow.resultType || "",
@@ -691,6 +729,73 @@ app.get("/api/download-ebook", async (request, response) => {
     response.download(ebookPath, product.fileName);
   } catch (error) {
     console.error("Stripe ebook download failed:", error);
+    response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
+  }
+});
+
+app.get("/download-email-ebook", async (request, response) => {
+  try {
+    const deliveryToken =
+      typeof request.query.delivery_token === "string" ? request.query.delivery_token : "";
+
+    if (!deliveryToken) {
+      response.status(400).send("Missing delivery token.");
+      return;
+    }
+
+    const grant = readEmailDownloadGrant(deliveryToken);
+    if (!grant) {
+      response.status(403).send("This email download link is invalid or expired.");
+      return;
+    }
+
+    let resultType = grant.resultType;
+    if (grant.provider === "stripe") {
+      if (!stripe) {
+        response.status(500).send("Stripe is not configured.");
+        return;
+      }
+
+      const session = await stripe.checkout.sessions.retrieve(grant.sourceId);
+      if (session.payment_status !== "paid") {
+        response.status(403).send("This payment is not completed.");
+        return;
+      }
+
+      resultType = session.metadata?.resultType || resultType;
+    } else {
+      const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(grant.sourceId)}`, {
+        method: "GET",
+      });
+      const captureStatus =
+        order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
+      const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
+
+      if (!isPaid) {
+        response.status(403).send("This PayPal payment is not completed.");
+        return;
+      }
+
+      resultType = order.purchase_units?.[0]?.custom_id || resultType;
+    }
+
+    const product = PRODUCTS[resultType];
+    if (!product) {
+      response.status(404).send("No ebook is configured for this result type.");
+      return;
+    }
+
+    const ebookPath = path.join(__dirname, "ebooks", product.fileName);
+    if (!fs.existsSync(ebookPath)) {
+      response.status(404).send(
+        `The ebook file is missing. Add ${product.fileName} to the ebooks directory.`,
+      );
+      return;
+    }
+
+    response.download(ebookPath, product.fileName);
+  } catch (error) {
+    console.error("Email ebook download failed:", error);
     response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
   }
 });
@@ -794,6 +899,7 @@ app.post("/api/paypal/capture-order", async (request, response) => {
     }
 
     await fulfillPaidOrder(request, {
+      request,
       provider: "paypal",
       sourceId: orderId,
       resultType: capture.purchase_units?.[0]?.custom_id || purchaseFlow.flow.resultType || "",
@@ -919,6 +1025,7 @@ app.get("/paypal-complete", async (request, response) => {
     }
 
     await fulfillPaidOrder(request, {
+      request,
       provider: "paypal",
       sourceId: paypalOrderId,
       resultType: order.purchase_units?.[0]?.custom_id || purchaseFlow.flow.resultType || "",
