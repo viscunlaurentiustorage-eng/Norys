@@ -3,7 +3,6 @@ require("dotenv").config();
 const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
-const nodemailer = require("nodemailer");
 const path = require("path");
 const Stripe = require("stripe");
 
@@ -19,26 +18,18 @@ const paypalClientSecret = process.env.PAYPAL_CLIENT_SECRET || "";
 const paypalEnv = (process.env.PAYPAL_ENV || "sandbox").toLowerCase() === "live" ? "live" : "sandbox";
 const paypalApiBase =
   paypalEnv === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
-const smtpHost = process.env.SMTP_HOST || "";
-const smtpPort = Number(process.env.SMTP_PORT || 587);
-const smtpSecure = String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
-const smtpUser = process.env.SMTP_USER || "";
-const smtpPass = process.env.SMTP_PASS || "";
-const emailFrom = process.env.EMAIL_FROM || "";
-const orderNotificationEmail = process.env.ORDER_NOTIFICATION_EMAIL || "";
-const emailDownloadSecret =
-  process.env.EMAIL_DOWNLOAD_SECRET || stripeSecretKey || paypalClientSecret || "norys-change-this-download-secret";
+const brevoApiKey = process.env.BREVO_API_KEY || "";
+const brevoListId = Number(process.env.BREVO_LIST_ID || 0);
+const brevoPaidEventName = process.env.BREVO_PAID_EVENT_NAME || "ebook_order_paid";
 
 const RESULT_STORAGE_KEY = "norysResult";
 const DOWNLOAD_GRANT_COOKIE = "norys_download_grant";
 const DOWNLOAD_GRANT_TTL_MS = 15 * 60 * 1000;
-const EMAIL_DOWNLOAD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PURCHASE_FLOW_COOKIE = "norys_purchase_flow";
 const PURCHASE_FLOW_TTL_MS = 60 * 60 * 1000;
 const downloadGrants = new Map();
 const purchaseFlows = new Map();
 const fulfilledOrders = new Map();
-let mailTransporter = null;
 
 const PRODUCTS = {
   overthinker: {
@@ -46,7 +37,7 @@ const PRODUCTS = {
       de: "Die Überdenkerin: Raus aus dem Grübeln, rein in echte Nähe",
       en: "The Overthinker: Out of Rumination, Back Into Real Closeness",
     },
-    amount: 10,
+    amount: 51,
     currency: "eur",
     fileName: "overthinker-ebook.pdf",
   },
@@ -55,7 +46,7 @@ const PRODUCTS = {
       de: "Die emotionale Antreiberin: Nähe schaffen ohne Druck",
       en: "The Emotional Initiator: Creating Closeness Without Pressure",
     },
-    amount: 10,
+    amount: 51,
     currency: "eur",
     fileName: "emotional-initiator-ebook.pdf",
   },
@@ -64,7 +55,7 @@ const PRODUCTS = {
       de: "Die Konfliktvermeiderin: Klar sprechen ohne Eskalation",
       en: "The Conflict Avoider: Speaking Clearly Without Escalation",
     },
-    amount: 10,
+    amount: 51,
     currency: "eur",
     fileName: "conflict-avoider-ebook.pdf",
   },
@@ -73,7 +64,7 @@ const PRODUCTS = {
       de: "Die Anpasserin: Grenzen setzen ohne Schuldgefühl",
       en: "The Adapter: Setting Boundaries Without Guilt",
     },
-    amount: 10,
+    amount: 51,
     currency: "eur",
     fileName: "adapter-ebook.pdf",
   },
@@ -139,49 +130,9 @@ function getProductName(product, language = "de") {
   return String(product?.name || "");
 }
 
-function getMailer() {
-  if (!smtpHost || !smtpUser || !smtpPass || !emailFrom) {
-    return null;
-  }
-
-  if (!mailTransporter) {
-    mailTransporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpSecure,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    });
-  }
-
-  return mailTransporter;
-}
-
 function buildEbookReturnUrl(request, provider) {
   const publicBaseUrl = getPublicBaseUrl(request);
   return buildAbsoluteUrl(publicBaseUrl, `/ebook.html?purchase=confirmed&provider=${encodeURIComponent(provider)}`);
-}
-
-function getOrderSummaryText(language, productName) {
-  if (normalizeLanguage(language) === "en") {
-    return {
-      subject: `Your Norys eBook order: ${productName}`,
-      intro: "Your order has been confirmed.",
-      body: "Your eBook is ready. You can download it with the secure link below.",
-      cta: "Download your eBook",
-      note: "Keep this email. The link stays active for 30 days.",
-    };
-  }
-
-  return {
-    subject: `Deine Norys eBook Bestellung: ${productName}`,
-    intro: "Deine Bestellung wurde bestätigt.",
-    body: "Dein eBook ist jetzt bereit. Du kannst es über den sicheren Link unten herunterladen.",
-    cta: "eBook herunterladen",
-    note: "Bewahre diese E-Mail auf. Der Link bleibt 30 Tage aktiv.",
-  };
 }
 
 function parseCookies(request) {
@@ -302,52 +253,6 @@ function issueDownloadGrant(request, response, payload) {
   return token;
 }
 
-function issueEmailDownloadGrant(payload) {
-  const serializedPayload = Buffer.from(
-    JSON.stringify({
-      ...payload,
-      expiresAt: Date.now() + EMAIL_DOWNLOAD_TTL_MS,
-    }),
-  ).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", emailDownloadSecret)
-    .update(serializedPayload)
-    .digest("hex");
-
-  return `${serializedPayload}.${signature}`;
-}
-
-function readEmailDownloadGrant(token) {
-  if (!token || typeof token !== "string" || !token.includes(".")) {
-    return null;
-  }
-
-  const [serializedPayload, signature] = token.split(".");
-  const expectedSignature = crypto
-    .createHmac("sha256", emailDownloadSecret)
-    .update(serializedPayload)
-    .digest("hex");
-
-  if (
-    !signature
-    || signature.length !== expectedSignature.length
-    || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
-  ) {
-    return null;
-  }
-
-  try {
-    const payload = JSON.parse(Buffer.from(serializedPayload, "base64url").toString("utf8"));
-    if (!payload?.expiresAt || payload.expiresAt <= Date.now()) {
-      return null;
-    }
-
-    return payload;
-  } catch (_error) {
-    return null;
-  }
-}
-
 function consumeDownloadGrant(request, response, expectedProvider) {
   cleanupExpiredDownloadGrants();
 
@@ -383,55 +288,94 @@ function getFulfillmentKey(provider, sourceId) {
   return `${provider}:${sourceId}`;
 }
 
-function buildEmailDownloadUrl(request, token) {
-  return buildAbsoluteUrl(
-    getPublicBaseUrl(request),
-    `/download-email-ebook?delivery_token=${encodeURIComponent(token)}`,
-  );
-}
-
-async function sendOrderConfirmationEmail({
-  to,
-  language,
-  productName,
-  downloadUrl,
-  provider,
-  orderId,
-}) {
-  const transporter = getMailer();
-  if (!transporter) {
-    throw new Error("Email delivery is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and EMAIL_FROM.");
+async function brevoRequest(pathname, payload) {
+  if (!brevoApiKey) {
+    throw new Error("Brevo is not configured. Add BREVO_API_KEY to your environment.");
   }
 
-  const copy = getOrderSummaryText(language, productName);
-  const providerLabel = provider === "paypal" ? "PayPal" : "Stripe";
-  const orderLabel = orderId ? `<p style="margin:0 0 12px;">Order ID: ${orderId}</p>` : "";
+  const response = await fetch(`https://api.brevo.com/v3${pathname}`, {
+    method: "POST",
+    headers: {
+      "api-key": brevoApiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
 
-  await transporter.sendMail({
-    from: emailFrom,
-    to,
-    bcc: orderNotificationEmail || undefined,
-    subject: copy.subject,
-    html: `
-      <div style="font-family:Montserrat,Arial,sans-serif;color:#111;line-height:1.6;">
-        <h2 style="margin:0 0 12px;">${copy.intro}</h2>
-        <p style="margin:0 0 12px;">${copy.body}</p>
-        <p style="margin:0 0 12px;">${productName}</p>
-        <p style="margin:0 0 12px;">${providerLabel}</p>
-        ${orderLabel}
-        <p style="margin:20px 0;">
-          <a href="${downloadUrl}" style="display:inline-block;background:#b95d18;color:#fff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;">
-            ${copy.cta}
-          </a>
-        </p>
-        <p style="margin:0;color:rgba(17,17,17,0.72);">${copy.note}</p>
-      </div>
-    `,
-    text: `${copy.intro}\n\n${copy.body}\n\n${productName}\n${providerLabel}\n${orderId ? `Order ID: ${orderId}\n` : ""}\n${downloadUrl}\n\n${copy.note}`,
+  const rawText = await response.text();
+  let data = {};
+
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch (_error) {
+    data = {};
+  }
+
+  if (!response.ok) {
+    const message = data.message || rawText || `Brevo request failed with HTTP ${response.status}.`;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+async function syncPaidOrderToBrevo({
+  email,
+  language,
+  productName,
+  provider,
+  orderId,
+  resultType,
+  amount,
+  currency,
+}) {
+  const normalizedLanguage = normalizeLanguage(language);
+  const contactAttributes = {
+    EBOOK_KEY: resultType,
+    PRODUCT_NAME: productName,
+    RESULT_TYPE: resultType,
+    ORDER_ID: orderId,
+    PAYMENT_PROVIDER: provider,
+    LANGUAGE: normalizedLanguage,
+    ORDER_AMOUNT: Number((amount / 100).toFixed(2)),
+    ORDER_CURRENCY: String(currency || "").toUpperCase(),
+  };
+
+  const contactPayload = {
+    email,
+    emailBlacklisted: false,
+    smsBlacklisted: false,
+    updateEnabled: true,
+    attributes: contactAttributes,
+  };
+
+  if (brevoListId > 0) {
+    contactPayload.listIds = [brevoListId];
+  }
+
+  await brevoRequest("/contacts", contactPayload);
+
+  await brevoRequest("/events", {
+    event_name: brevoPaidEventName,
+    identifiers: {
+      email_id: email,
+    },
+    contact_properties: contactAttributes,
+    event_properties: {
+      order_id: orderId,
+      payment_provider: provider,
+      result_type: resultType,
+      ebook_key: resultType,
+      product_name: productName,
+      language: normalizedLanguage,
+      amount: Number((amount / 100).toFixed(2)),
+      currency: String(currency || "").toUpperCase(),
+    },
   });
 }
 
-async function fulfillOrderByEmail(request, payload) {
+async function fulfillPaidOrder(_request, payload) {
   const {
     provider,
     sourceId,
@@ -456,29 +400,22 @@ async function fulfillOrderByEmail(request, payload) {
     return existing;
   }
 
-  const deliveryToken = issueEmailDownloadGrant({
-    provider,
-    sourceId,
-    resultType,
-    email,
-  });
-  const downloadUrl = buildEmailDownloadUrl(request, deliveryToken);
   const productName = getProductName(product, language);
 
-  await sendOrderConfirmationEmail({
-    to: email,
+  await syncPaidOrderToBrevo({
+    email,
     language,
     productName,
-    downloadUrl,
     provider,
     orderId,
+    resultType,
+    amount: product.amount,
+    currency: product.currency,
   });
 
   const fulfillment = {
     email,
     productName,
-    downloadUrl,
-    deliveryToken,
     sentAt: Date.now(),
     orderId,
   };
@@ -695,7 +632,7 @@ app.get("/stripe-complete", async (request, response) => {
       return;
     }
 
-    await fulfillOrderByEmail(request, {
+    await fulfillPaidOrder(request, {
       provider: "stripe",
       sourceId: sessionId,
       resultType: session.metadata?.resultType || purchaseFlow.flow.resultType || "",
@@ -707,7 +644,7 @@ app.get("/stripe-complete", async (request, response) => {
     revokePurchaseFlow(purchaseFlow.token, request, response);
     response.redirect(buildEbookReturnUrl(request, "stripe"));
   } catch (error) {
-    console.error("Stripe email fulfillment failed:", error);
+    console.error("Stripe Brevo fulfillment failed:", error);
     response.redirect("/ebook.html?purchase=error");
   }
 });
@@ -754,73 +691,6 @@ app.get("/api/download-ebook", async (request, response) => {
     response.download(ebookPath, product.fileName);
   } catch (error) {
     console.error("Stripe ebook download failed:", error);
-    response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
-  }
-});
-
-app.get("/download-email-ebook", async (request, response) => {
-  try {
-    const deliveryToken =
-      typeof request.query.delivery_token === "string" ? request.query.delivery_token : "";
-
-    if (!deliveryToken) {
-      response.status(400).send("Missing delivery token.");
-      return;
-    }
-
-    const grant = readEmailDownloadGrant(deliveryToken);
-    if (!grant) {
-      response.status(403).send("This email download link is invalid or expired.");
-      return;
-    }
-
-    let resultType = grant.resultType;
-    if (grant.provider === "stripe") {
-      if (!stripe) {
-        response.status(500).send("Stripe is not configured.");
-        return;
-      }
-
-      const session = await stripe.checkout.sessions.retrieve(grant.sourceId);
-      if (session.payment_status !== "paid") {
-        response.status(403).send("This payment is not completed.");
-        return;
-      }
-
-      resultType = session.metadata?.resultType || resultType;
-    } else {
-      const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(grant.sourceId)}`, {
-        method: "GET",
-      });
-      const captureStatus =
-        order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
-      const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
-
-      if (!isPaid) {
-        response.status(403).send("This PayPal payment is not completed.");
-        return;
-      }
-
-      resultType = order.purchase_units?.[0]?.custom_id || resultType;
-    }
-
-    const product = PRODUCTS[resultType];
-    if (!product) {
-      response.status(404).send("No ebook is configured for this result type.");
-      return;
-    }
-
-    const ebookPath = path.join(__dirname, "ebooks", product.fileName);
-    if (!fs.existsSync(ebookPath)) {
-      response.status(404).send(
-        `The ebook file is missing. Add ${product.fileName} to the ebooks directory.`,
-      );
-      return;
-    }
-
-    response.download(ebookPath, product.fileName);
-  } catch (error) {
-    console.error("Email ebook download failed:", error);
     response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
   }
 });
@@ -896,16 +766,50 @@ app.post("/api/paypal/capture-order", async (request, response) => {
       return;
     }
 
+    const purchaseFlow = validatePurchaseFlow(request, response, {
+      provider: "paypal",
+      sourceId: orderId,
+    });
+
+    if (!purchaseFlow) {
+      return;
+    }
+
     const capture = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(orderId)}/capture`, {
       method: "POST",
       body: JSON.stringify({}),
     });
+
+    const isPaid =
+      capture.status === "COMPLETED"
+      || capture.purchase_units?.[0]?.payments?.captures?.[0]?.status === "COMPLETED";
+
+    if (!isPaid) {
+      response.status(409).json({
+        error: "PayPal payment is not completed yet.",
+        orderId: capture.id,
+        status: capture.status,
+      });
+      return;
+    }
+
+    await fulfillPaidOrder(request, {
+      provider: "paypal",
+      sourceId: orderId,
+      resultType: capture.purchase_units?.[0]?.custom_id || purchaseFlow.flow.resultType || "",
+      language: purchaseFlow.flow.language || "de",
+      email: capture.payer?.email_address || "",
+      orderId: capture.purchase_units?.[0]?.reference_id || "",
+    });
+
+    revokePurchaseFlow(purchaseFlow.token, request, response);
 
     response.json({
       orderId: capture.id,
       status: capture.status,
       resultType: capture.purchase_units?.[0]?.custom_id || "",
       referenceId: capture.purchase_units?.[0]?.reference_id || "",
+      redirectUrl: buildEbookReturnUrl(request, "paypal"),
     });
   } catch (error) {
     console.error("PayPal capture order failed:", error);
@@ -999,14 +903,12 @@ app.get("/paypal-complete", async (request, response) => {
     const isPaidBefore = order.status === "COMPLETED" || captureStatusBefore === "COMPLETED";
 
     if (!isPaidBefore) {
-      await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, {
+      const capture = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, {
         method: "POST",
         body: JSON.stringify({}),
       });
 
-      order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, {
-        method: "GET",
-      });
+      order = capture;
     }
 
     const captureStatus = order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
@@ -1016,7 +918,7 @@ app.get("/paypal-complete", async (request, response) => {
       return;
     }
 
-    await fulfillOrderByEmail(request, {
+    await fulfillPaidOrder(request, {
       provider: "paypal",
       sourceId: paypalOrderId,
       resultType: order.purchase_units?.[0]?.custom_id || purchaseFlow.flow.resultType || "",
@@ -1028,7 +930,7 @@ app.get("/paypal-complete", async (request, response) => {
     revokePurchaseFlow(purchaseFlow.token, request, response);
     response.redirect(buildEbookReturnUrl(request, "paypal"));
   } catch (error) {
-    console.error("PayPal email fulfillment failed:", error);
+    console.error("PayPal Brevo fulfillment failed:", error);
     response.redirect("/ebook.html?purchase=error");
   }
 });

@@ -755,7 +755,7 @@ function renderPayPalButtons() {
           throw new Error(payload.error || getUi().paypalCaptureError);
         }
 
-        window.location.assign(`/paypal-complete?token=${encodeURIComponent(data.orderID)}`);
+        window.location.assign(payload.redirectUrl || `/ebook.html?purchase=confirmed&provider=paypal`);
       },
       onError: (error) => {
         console.error("PayPal checkout failed:", error);
