@@ -258,6 +258,14 @@ const UI_TEXT = {
     paypalCreateError: "PayPal Bestellung konnte nicht erstellt werden.",
     paypalCaptureError: "PayPal Zahlung konnte nicht bestätigt werden.",
     paypalCheckoutError: "PayPal Checkout konnte nicht gestartet werden.",
+    purchaseConfirmedStripe:
+      "Deine Zahlung war erfolgreich. Die Bestätigung und dein Download-Link wurden an deine E-Mail-Adresse gesendet.",
+    purchaseConfirmedPaypal:
+      "Deine PayPal Zahlung war erfolgreich. Die Bestätigung und dein Download-Link wurden an deine E-Mail-Adresse gesendet.",
+    purchasePending:
+      "Deine Zahlung wird noch verarbeitet. Bitte prüfe gleich dein E-Mail-Postfach.",
+    purchaseError:
+      "Deine Zahlung konnte nicht vollständig bestätigt werden. Bitte versuche es erneut oder melde dich beim Support.",
     testimonialsHeading: "So fühlt es sich an, wenn man sich endlich wirklich versteht",
     expiredLabel: "Abgelaufen",
     dayLabel: "Tage",
@@ -303,6 +311,14 @@ const UI_TEXT = {
     paypalCreateError: "PayPal order could not be created.",
     paypalCaptureError: "PayPal payment could not be confirmed.",
     paypalCheckoutError: "PayPal checkout could not be started.",
+    purchaseConfirmedStripe:
+      "Your payment was successful. Your confirmation and download link were sent to your email address.",
+    purchaseConfirmedPaypal:
+      "Your PayPal payment was successful. Your confirmation and download link were sent to your email address.",
+    purchasePending:
+      "Your payment is still being processed. Please check your email inbox in a moment.",
+    purchaseError:
+      "Your payment could not be fully confirmed. Please try again or contact support.",
     testimonialsHeading: "What it feels like when you finally truly understand yourself",
     expiredLabel: "Expired",
     dayLabel: "days",
@@ -318,6 +334,7 @@ const UI_TEXT = {
 };
 
 const result = getStoredResult();
+const pageParams = new URLSearchParams(window.location.search);
 let currentLanguage = getStoredLanguage();
 let currentContent = getCurrentContent();
 let offerTimerId = null;
@@ -327,6 +344,8 @@ const checkoutButtonText = document.getElementById("ebookCheckoutBtnText");
 const payPalContainer = document.getElementById("paypal-button-container");
 const payPalSection = document.querySelector(".ebook-paypal");
 const heroCover = document.getElementById("ebookHeroCover");
+const purchaseNotice = document.getElementById("ebookPurchaseNotice");
+const purchaseNoticeText = document.getElementById("ebookPurchaseNoticeText");
 
 const EBOOK_COVERS = {
   overthinker: "https://i.postimg.cc/d3ZgRs6t/Grublerin.png",
@@ -414,6 +433,7 @@ function applyLanguage() {
   setText("ebookCheckoutBtnText", ui.checkoutButton);
   setText("ebookPayPalLabel", ui.paypalLabel);
   setText("ebookTestimonialsHeading", ui.testimonialsHeading);
+  applyPurchaseNotice();
 }
 
 function handleLanguageToggle() {
@@ -440,6 +460,34 @@ function hydratePage() {
   renderList("ebookIncludesList", currentContent.ebookIncludes || currentContent.outcomes);
   renderTestimonials();
   initOfferCountdown();
+}
+
+function applyPurchaseNotice() {
+  if (!purchaseNotice || !purchaseNoticeText) {
+    return;
+  }
+
+  const ui = getUi();
+  const purchaseState = pageParams.get("purchase");
+  const provider = pageParams.get("provider");
+
+  if (!purchaseState) {
+    purchaseNotice.hidden = true;
+    purchaseNoticeText.textContent = "";
+    return;
+  }
+
+  let message = "";
+  if (purchaseState === "confirmed") {
+    message = provider === "paypal" ? ui.purchaseConfirmedPaypal : ui.purchaseConfirmedStripe;
+  } else if (purchaseState === "pending") {
+    message = ui.purchasePending;
+  } else {
+    message = ui.purchaseError;
+  }
+
+  purchaseNotice.hidden = false;
+  purchaseNoticeText.textContent = message;
 }
 
 function updateHeroCover() {
@@ -707,7 +755,7 @@ function renderPayPalButtons() {
           throw new Error(payload.error || getUi().paypalCaptureError);
         }
 
-        window.location.assign(`/paypal-success.html?token=${encodeURIComponent(data.orderID)}`);
+        window.location.assign(`/paypal-complete?token=${encodeURIComponent(data.orderID)}`);
       },
       onError: (error) => {
         console.error("PayPal checkout failed:", error);

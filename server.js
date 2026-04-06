@@ -3,6 +3,7 @@ require("dotenv").config();
 const crypto = require("crypto");
 const express = require("express");
 const fs = require("fs");
+const nodemailer = require("nodemailer");
 const path = require("path");
 const Stripe = require("stripe");
 
@@ -18,14 +19,26 @@ const paypalClientSecret = process.env.PAYPAL_CLIENT_SECRET || "";
 const paypalEnv = (process.env.PAYPAL_ENV || "sandbox").toLowerCase() === "live" ? "live" : "sandbox";
 const paypalApiBase =
   paypalEnv === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+const smtpHost = process.env.SMTP_HOST || "";
+const smtpPort = Number(process.env.SMTP_PORT || 587);
+const smtpSecure = String(process.env.SMTP_SECURE || "").toLowerCase() === "true";
+const smtpUser = process.env.SMTP_USER || "";
+const smtpPass = process.env.SMTP_PASS || "";
+const emailFrom = process.env.EMAIL_FROM || "";
+const orderNotificationEmail = process.env.ORDER_NOTIFICATION_EMAIL || "";
+const emailDownloadSecret =
+  process.env.EMAIL_DOWNLOAD_SECRET || stripeSecretKey || paypalClientSecret || "norys-change-this-download-secret";
 
 const RESULT_STORAGE_KEY = "norysResult";
 const DOWNLOAD_GRANT_COOKIE = "norys_download_grant";
 const DOWNLOAD_GRANT_TTL_MS = 15 * 60 * 1000;
+const EMAIL_DOWNLOAD_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const PURCHASE_FLOW_COOKIE = "norys_purchase_flow";
 const PURCHASE_FLOW_TTL_MS = 60 * 60 * 1000;
 const downloadGrants = new Map();
 const purchaseFlows = new Map();
+const fulfilledOrders = new Map();
+let mailTransporter = null;
 
 const PRODUCTS = {
   overthinker: {
@@ -124,6 +137,51 @@ function getProductName(product, language = "de") {
   }
 
   return String(product?.name || "");
+}
+
+function getMailer() {
+  if (!smtpHost || !smtpUser || !smtpPass || !emailFrom) {
+    return null;
+  }
+
+  if (!mailTransporter) {
+    mailTransporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+  }
+
+  return mailTransporter;
+}
+
+function buildEbookReturnUrl(request, provider) {
+  const publicBaseUrl = getPublicBaseUrl(request);
+  return buildAbsoluteUrl(publicBaseUrl, `/ebook.html?purchase=confirmed&provider=${encodeURIComponent(provider)}`);
+}
+
+function getOrderSummaryText(language, productName) {
+  if (normalizeLanguage(language) === "en") {
+    return {
+      subject: `Your Norys eBook order: ${productName}`,
+      intro: "Your order has been confirmed.",
+      body: "Your eBook is ready. You can download it with the secure link below.",
+      cta: "Download your eBook",
+      note: "Keep this email. The link stays active for 30 days.",
+    };
+  }
+
+  return {
+    subject: `Deine Norys eBook Bestellung: ${productName}`,
+    intro: "Deine Bestellung wurde bestätigt.",
+    body: "Dein eBook ist jetzt bereit. Du kannst es über den sicheren Link unten herunterladen.",
+    cta: "eBook herunterladen",
+    note: "Bewahre diese E-Mail auf. Der Link bleibt 30 Tage aktiv.",
+  };
 }
 
 function parseCookies(request) {
@@ -244,6 +302,52 @@ function issueDownloadGrant(request, response, payload) {
   return token;
 }
 
+function issueEmailDownloadGrant(payload) {
+  const serializedPayload = Buffer.from(
+    JSON.stringify({
+      ...payload,
+      expiresAt: Date.now() + EMAIL_DOWNLOAD_TTL_MS,
+    }),
+  ).toString("base64url");
+  const signature = crypto
+    .createHmac("sha256", emailDownloadSecret)
+    .update(serializedPayload)
+    .digest("hex");
+
+  return `${serializedPayload}.${signature}`;
+}
+
+function readEmailDownloadGrant(token) {
+  if (!token || typeof token !== "string" || !token.includes(".")) {
+    return null;
+  }
+
+  const [serializedPayload, signature] = token.split(".");
+  const expectedSignature = crypto
+    .createHmac("sha256", emailDownloadSecret)
+    .update(serializedPayload)
+    .digest("hex");
+
+  if (
+    !signature
+    || signature.length !== expectedSignature.length
+    || !crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(serializedPayload, "base64url").toString("utf8"));
+    if (!payload?.expiresAt || payload.expiresAt <= Date.now()) {
+      return null;
+    }
+
+    return payload;
+  } catch (_error) {
+    return null;
+  }
+}
+
 function consumeDownloadGrant(request, response, expectedProvider) {
   cleanupExpiredDownloadGrants();
 
@@ -273,6 +377,114 @@ function consumeDownloadGrant(request, response, expectedProvider) {
   downloadGrants.set(token, grant);
   response.clearCookie(DOWNLOAD_GRANT_COOKIE, buildCookieOptions(request));
   return grant;
+}
+
+function getFulfillmentKey(provider, sourceId) {
+  return `${provider}:${sourceId}`;
+}
+
+function buildEmailDownloadUrl(request, token) {
+  return buildAbsoluteUrl(
+    getPublicBaseUrl(request),
+    `/download-email-ebook?delivery_token=${encodeURIComponent(token)}`,
+  );
+}
+
+async function sendOrderConfirmationEmail({
+  to,
+  language,
+  productName,
+  downloadUrl,
+  provider,
+  orderId,
+}) {
+  const transporter = getMailer();
+  if (!transporter) {
+    throw new Error("Email delivery is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS and EMAIL_FROM.");
+  }
+
+  const copy = getOrderSummaryText(language, productName);
+  const providerLabel = provider === "paypal" ? "PayPal" : "Stripe";
+  const orderLabel = orderId ? `<p style="margin:0 0 12px;">Order ID: ${orderId}</p>` : "";
+
+  await transporter.sendMail({
+    from: emailFrom,
+    to,
+    bcc: orderNotificationEmail || undefined,
+    subject: copy.subject,
+    html: `
+      <div style="font-family:Montserrat,Arial,sans-serif;color:#111;line-height:1.6;">
+        <h2 style="margin:0 0 12px;">${copy.intro}</h2>
+        <p style="margin:0 0 12px;">${copy.body}</p>
+        <p style="margin:0 0 12px;">${productName}</p>
+        <p style="margin:0 0 12px;">${providerLabel}</p>
+        ${orderLabel}
+        <p style="margin:20px 0;">
+          <a href="${downloadUrl}" style="display:inline-block;background:#b95d18;color:#fff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700;">
+            ${copy.cta}
+          </a>
+        </p>
+        <p style="margin:0;color:rgba(17,17,17,0.72);">${copy.note}</p>
+      </div>
+    `,
+    text: `${copy.intro}\n\n${copy.body}\n\n${productName}\n${providerLabel}\n${orderId ? `Order ID: ${orderId}\n` : ""}\n${downloadUrl}\n\n${copy.note}`,
+  });
+}
+
+async function fulfillOrderByEmail(request, payload) {
+  const {
+    provider,
+    sourceId,
+    resultType,
+    language,
+    email,
+    orderId,
+  } = payload;
+
+  if (!email) {
+    throw new Error("The paid order does not contain an email address.");
+  }
+
+  const product = PRODUCTS[resultType];
+  if (!product) {
+    throw new Error("No ebook is configured for this result type.");
+  }
+
+  const fulfillmentKey = getFulfillmentKey(provider, sourceId);
+  const existing = fulfilledOrders.get(fulfillmentKey);
+  if (existing) {
+    return existing;
+  }
+
+  const deliveryToken = issueEmailDownloadGrant({
+    provider,
+    sourceId,
+    resultType,
+    email,
+  });
+  const downloadUrl = buildEmailDownloadUrl(request, deliveryToken);
+  const productName = getProductName(product, language);
+
+  await sendOrderConfirmationEmail({
+    to: email,
+    language,
+    productName,
+    downloadUrl,
+    provider,
+    orderId,
+  });
+
+  const fulfillment = {
+    email,
+    productName,
+    downloadUrl,
+    deliveryToken,
+    sentAt: Date.now(),
+    orderId,
+  };
+
+  fulfilledOrders.set(fulfillmentKey, fulfillment);
+  return fulfillment;
 }
 
 async function getPayPalAccessToken() {
@@ -355,9 +567,9 @@ app.post("/api/create-checkout-session", async (request, response) => {
     const publicBaseUrl = getPublicBaseUrl(request);
     const successUrl = buildAbsoluteUrl(
       publicBaseUrl,
-      "/success.html?session_id={CHECKOUT_SESSION_ID}",
+      "/stripe-complete?session_id={CHECKOUT_SESSION_ID}",
     );
-    const cancelUrl = buildAbsoluteUrl(publicBaseUrl, "/result.html");
+    const cancelUrl = buildAbsoluteUrl(publicBaseUrl, "/ebook.html");
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -455,6 +667,51 @@ app.get("/api/checkout-session", async (request, response) => {
   }
 });
 
+app.get("/stripe-complete", async (request, response) => {
+  if (!stripe) {
+    response.status(500).send("Stripe is not configured.");
+    return;
+  }
+
+  const sessionId = request.query.session_id;
+  if (typeof sessionId !== "string" || !sessionId) {
+    response.redirect("/ebook.html?purchase=error");
+    return;
+  }
+
+  try {
+    const purchaseFlow = validatePurchaseFlow(request, response, {
+      provider: "stripe",
+      sourceId: sessionId,
+    });
+
+    if (!purchaseFlow) {
+      return;
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    if (session.payment_status !== "paid") {
+      response.redirect("/ebook.html?purchase=pending");
+      return;
+    }
+
+    await fulfillOrderByEmail(request, {
+      provider: "stripe",
+      sourceId: sessionId,
+      resultType: session.metadata?.resultType || purchaseFlow.flow.resultType || "",
+      language: session.metadata?.language || purchaseFlow.flow.language || "de",
+      email: session.customer_details?.email || session.customer_email || "",
+      orderId: session.metadata?.orderId || "",
+    });
+
+    revokePurchaseFlow(purchaseFlow.token, request, response);
+    response.redirect(buildEbookReturnUrl(request, "stripe"));
+  } catch (error) {
+    console.error("Stripe email fulfillment failed:", error);
+    response.redirect("/ebook.html?purchase=error");
+  }
+});
+
 app.get("/api/download-ebook", async (request, response) => {
   if (!stripe) {
     response.status(500).send("Stripe is not configured.");
@@ -501,6 +758,73 @@ app.get("/api/download-ebook", async (request, response) => {
   }
 });
 
+app.get("/download-email-ebook", async (request, response) => {
+  try {
+    const deliveryToken =
+      typeof request.query.delivery_token === "string" ? request.query.delivery_token : "";
+
+    if (!deliveryToken) {
+      response.status(400).send("Missing delivery token.");
+      return;
+    }
+
+    const grant = readEmailDownloadGrant(deliveryToken);
+    if (!grant) {
+      response.status(403).send("This email download link is invalid or expired.");
+      return;
+    }
+
+    let resultType = grant.resultType;
+    if (grant.provider === "stripe") {
+      if (!stripe) {
+        response.status(500).send("Stripe is not configured.");
+        return;
+      }
+
+      const session = await stripe.checkout.sessions.retrieve(grant.sourceId);
+      if (session.payment_status !== "paid") {
+        response.status(403).send("This payment is not completed.");
+        return;
+      }
+
+      resultType = session.metadata?.resultType || resultType;
+    } else {
+      const order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(grant.sourceId)}`, {
+        method: "GET",
+      });
+      const captureStatus =
+        order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
+      const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
+
+      if (!isPaid) {
+        response.status(403).send("This PayPal payment is not completed.");
+        return;
+      }
+
+      resultType = order.purchase_units?.[0]?.custom_id || resultType;
+    }
+
+    const product = PRODUCTS[resultType];
+    if (!product) {
+      response.status(404).send("No ebook is configured for this result type.");
+      return;
+    }
+
+    const ebookPath = path.join(__dirname, "ebooks", product.fileName);
+    if (!fs.existsSync(ebookPath)) {
+      response.status(404).send(
+        `The ebook file is missing. Add ${product.fileName} to the ebooks directory.`,
+      );
+      return;
+    }
+
+    response.download(ebookPath, product.fileName);
+  } catch (error) {
+    console.error("Email ebook download failed:", error);
+    response.status(500).send(error instanceof Error ? error.message : "Download could not be prepared.");
+  }
+});
+
 app.post("/api/paypal/create-order", async (request, response) => {
   try {
     const resultType = request.body?.resultType;
@@ -514,7 +838,7 @@ app.post("/api/paypal/create-order", async (request, response) => {
     }
 
     const publicBaseUrl = getPublicBaseUrl(request);
-    const returnUrl = buildAbsoluteUrl(publicBaseUrl, "/paypal-success.html");
+    const returnUrl = buildAbsoluteUrl(publicBaseUrl, "/paypal-complete");
     const cancelUrl = buildAbsoluteUrl(publicBaseUrl, "/ebook.html");
 
     const order = await paypalRequest("/v2/checkout/orders", {
@@ -525,7 +849,7 @@ app.post("/api/paypal/create-order", async (request, response) => {
           {
             custom_id: resultType,
             reference_id: orderId,
-            description: getProductName(product, "de"),
+            description: getProductName(product, language),
             amount: {
               currency_code: product.currency.toUpperCase(),
               value: (product.amount / 100).toFixed(2),
@@ -646,6 +970,66 @@ app.get("/api/paypal/order-status", async (request, response) => {
     response.status(500).json({
       error: error instanceof Error ? error.message : "PayPal order could not be verified.",
     });
+  }
+});
+
+app.get("/paypal-complete", async (request, response) => {
+  try {
+    const paypalOrderId = request.query.token;
+    if (typeof paypalOrderId !== "string" || !paypalOrderId) {
+      response.redirect("/ebook.html?purchase=error");
+      return;
+    }
+
+    const purchaseFlow = validatePurchaseFlow(request, response, {
+      provider: "paypal",
+      sourceId: paypalOrderId,
+    });
+
+    if (!purchaseFlow) {
+      return;
+    }
+
+    let order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, {
+      method: "GET",
+    });
+
+    const captureStatusBefore =
+      order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
+    const isPaidBefore = order.status === "COMPLETED" || captureStatusBefore === "COMPLETED";
+
+    if (!isPaidBefore) {
+      await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+
+      order = await paypalRequest(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, {
+        method: "GET",
+      });
+    }
+
+    const captureStatus = order.purchase_units?.[0]?.payments?.captures?.[0]?.status || "";
+    const isPaid = order.status === "COMPLETED" || captureStatus === "COMPLETED";
+    if (!isPaid) {
+      response.redirect("/ebook.html?purchase=pending");
+      return;
+    }
+
+    await fulfillOrderByEmail(request, {
+      provider: "paypal",
+      sourceId: paypalOrderId,
+      resultType: order.purchase_units?.[0]?.custom_id || purchaseFlow.flow.resultType || "",
+      language: purchaseFlow.flow.language || "de",
+      email: order.payer?.email_address || "",
+      orderId: order.purchase_units?.[0]?.reference_id || "",
+    });
+
+    revokePurchaseFlow(purchaseFlow.token, request, response);
+    response.redirect(buildEbookReturnUrl(request, "paypal"));
+  } catch (error) {
+    console.error("PayPal email fulfillment failed:", error);
+    response.redirect("/ebook.html?purchase=error");
   }
 });
 
