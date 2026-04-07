@@ -66,6 +66,17 @@
       </div>
     </header>
 
+    <button
+      class="result-share-trigger"
+      id="shareResultButton"
+      type="button"
+      aria-haspopup="dialog"
+      aria-controls="shareResultDialog"
+      aria-label="Ergebnis teilen"
+    >
+      <i class="fa-solid fa-arrow-up-from-bracket" aria-hidden="true"></i>
+    </button>
+
     <main class="result-page">
       <section class="result-hero animate-on-scroll">
         <div class="container">
@@ -150,7 +161,7 @@
             <div class="offer-action">
               <div class="pricing-inline">
                 <p class="pricing-inline__old"><span id="oldPriceLabel">Statt</span> <span id="oldPrice">29,90 EUR</span></p>
-                <p class="pricing-inline__new"><span id="newPrice">0,10 EUR</span></p>
+                <p class="pricing-inline__new"><span id="newPrice">9,99 EUR</span></p>
                 <p class="pricing-inline__hint" id="pricingHint">Nur noch kurz zu diesem Ergebnis-Preis verfügbar.</p>
                 <div class="offer-deadline" id="offerDeadline">
                   <p class="offer-deadline__label" id="offerDeadlineLabel">Läuft ab in</p>
@@ -189,9 +200,89 @@
       </section>
     </main>
 
+    <div class="share-modal" id="shareResultDialog" hidden>
+      <div class="share-modal__backdrop" data-share-close="true"></div>
+      <div class="share-modal__panel" role="dialog" aria-modal="true" aria-labelledby="shareModalTitle">
+        <div class="share-modal__header">
+          <div>
+            <p class="share-modal__eyebrow" id="shareModalEyebrow">Ergebnis teilen</p>
+            <h2 class="share-modal__title" id="shareModalTitle">Wie möchtest du dein Ergebnis teilen?</h2>
+          </div>
+          <button class="share-modal__close" id="shareModalClose" type="button" aria-label="Schließen">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+
+        <p class="share-modal__copy" id="shareModalCopy">
+          Wähle zuerst, ob du dein Ergebnis als kurzen Text oder als gestaltetes Bild teilen möchtest.
+        </p>
+
+        <div class="share-mode-switch" role="tablist" aria-label="Share Format">
+          <button class="share-mode-switch__button is-active" id="shareModeText" type="button">Text</button>
+          <button class="share-mode-switch__button" id="shareModeImage" type="button">Bild</button>
+        </div>
+
+        <section class="share-panel is-active" id="shareTextPanel">
+          <label class="share-checkbox">
+            <input class="share-checkbox__input" id="shareIncludeLink" type="checkbox" checked />
+            <span class="share-checkbox__label" id="shareIncludeLinkLabel">Link im Text mit einfügen</span>
+          </label>
+          <div class="share-text-card">
+            <p class="share-text-card__label" id="shareTextPreviewLabel">Deine Vorschau</p>
+            <p class="share-text-card__body" id="shareTextPreview"></p>
+          </div>
+          <div class="share-actions">
+            <button class="cta" id="shareTextAction" type="button">
+              <span id="shareTextActionLabel">Text teilen</span>
+              <span class="cta__arrow" aria-hidden="true">
+                <i class="fa-solid fa-arrow-right-long"></i>
+              </span>
+            </button>
+            <button class="share-secondary" id="copyTextAction" type="button">Text kopieren</button>
+          </div>
+        </section>
+
+        <section class="share-panel" id="shareImagePanel">
+          <div class="share-style-picker">
+            <p class="share-style-picker__label" id="shareRatioLabel">Wähle ein Format</p>
+            <div class="share-style-picker__options">
+              <button class="share-style-pill is-active" data-share-ratio="1:1" type="button">1:1</button>
+              <button class="share-style-pill" data-share-ratio="3:4" type="button">3:4</button>
+              <button class="share-style-pill" data-share-ratio="9:16" type="button">9:16</button>
+            </div>
+          </div>
+
+          <div class="share-style-picker">
+            <p class="share-style-picker__label" id="shareStyleLabel">Wähle einen Stil</p>
+            <div class="share-style-picker__options">
+              <button class="share-style-pill is-active" data-share-style="warm" type="button">Warm</button>
+              <button class="share-style-pill" data-share-style="contrast" type="button">Klar</button>
+              <button class="share-style-pill" data-share-style="light" type="button">Soft</button>
+            </div>
+          </div>
+
+          <div class="share-image-card">
+            <canvas id="shareImageCanvas" width="1080" height="1350"></canvas>
+          </div>
+
+          <div class="share-actions">
+            <button class="cta" id="shareImageAction" type="button">
+              <span id="shareImageActionLabel">Bild teilen</span>
+              <span class="cta__arrow" aria-hidden="true">
+                <i class="fa-solid fa-arrow-right-long"></i>
+              </span>
+            </button>
+            <button class="share-secondary" id="downloadImageAction" type="button">Bild herunterladen</button>
+          </div>
+        </section>
+
+        <p class="share-modal__status" id="shareStatus" aria-live="polite"></p>
+      </div>
+    </div>
+
     <script src="assets/result-content.js?v=20260330c"></script>
     <script src="assets/tracker.js"></script>
-    <script src="result.js?v=20260403b"></script>
+    <script src="result.js?v=20260407a"></script>
     <script src="assets/script.js?v=20260330b"></script>
   </body>
 </html>

@@ -5,6 +5,9 @@ const RESULT_CONTENT_DE = window.NORYS_RESULT_CONTENT || {};
 const OFFER_DURATION_MS = ((4 * 24) + 16) * 60 * 60 * 1000 + 34 * 60 * 1000;
 let offerTimerId = null;
 const tracker = window.NorysTracker || null;
+let currentShareStyle = "warm";
+let currentShareRatio = "3:4";
+let latestPersonalizedContent = null;
 
 const RESULT_CONTENT_EN = {
   overthinker: {
@@ -291,6 +294,29 @@ const RESULT_UI_TEXT = {
     offerDeadlineLabel: "Läuft ab in",
     offerCtaText: "Ich will das jetzt für mich lösen",
     testimonialsHeading: "Was Frauen sagen, nachdem sie ihr Muster erkannt haben",
+    shareButtonAria: "Ergebnis teilen",
+    shareModalEyebrow: "Ergebnis teilen",
+    shareModalTitle: "Wie möchtest du dein Ergebnis teilen?",
+    shareModalCopy:
+      "Wähle zuerst, ob du dein Ergebnis als kurzen Text oder als gestaltetes Bild teilen möchtest.",
+    shareTextMode: "Text",
+    shareImageMode: "Bild",
+    shareTextPreviewLabel: "Deine Vorschau",
+    shareIncludeLinkLabel: "Link im Text mit einfügen",
+    shareRatioLabel: "Wähle ein Format",
+    shareTextAction: "Text teilen",
+    shareCopyAction: "Text kopieren",
+    shareStyleLabel: "Wähle einen Stil",
+    shareStyleWarm: "Warm",
+    shareStyleContrast: "Klar",
+    shareStyleLight: "Soft",
+    shareImageAction: "Bild teilen",
+    shareDownloadAction: "Bild herunterladen",
+    shareCloseAria: "Schließen",
+    shareTextCopied: "Text wurde kopiert.",
+    shareImageDownloaded: "Bild wurde heruntergeladen.",
+    shareNotSupported: "Teilen ist auf diesem Gerät gerade nicht direkt verfügbar.",
+    sharePreviewTag: "Mein Ergebnis bei Norys",
     expiredLabel: "Abgelaufen",
     dayLabel: "Tage",
     testimonialDates: [
@@ -323,6 +349,29 @@ const RESULT_UI_TEXT = {
     offerDeadlineLabel: "Ends in",
     offerCtaText: "I want to change this now",
     testimonialsHeading: "What women say after finally recognizing their pattern",
+    shareButtonAria: "Share result",
+    shareModalEyebrow: "Share result",
+    shareModalTitle: "How would you like to share your result?",
+    shareModalCopy:
+      "First choose whether you want to share your result as a short text or as a styled image.",
+    shareTextMode: "Text",
+    shareImageMode: "Image",
+    shareTextPreviewLabel: "Your preview",
+    shareIncludeLinkLabel: "Include link in the text",
+    shareRatioLabel: "Choose a format",
+    shareTextAction: "Share text",
+    shareCopyAction: "Copy text",
+    shareStyleLabel: "Choose a style",
+    shareStyleWarm: "Warm",
+    shareStyleContrast: "Clear",
+    shareStyleLight: "Soft",
+    shareImageAction: "Share image",
+    shareDownloadAction: "Download image",
+    shareCloseAria: "Close",
+    shareTextCopied: "Text copied.",
+    shareImageDownloaded: "Image downloaded.",
+    shareNotSupported: "Sharing is not directly available on this device right now.",
+    sharePreviewTag: "My result at Norys",
     expiredLabel: "Expired",
     dayLabel: "days",
     testimonialDates: [
@@ -605,6 +654,389 @@ function getCurrentContent() {
   return localizedContent[result.type] || localizedContent.overthinker;
 }
 
+function getShareUrl() {
+  return `${window.location.origin}/quiz.html`;
+}
+
+function getShareText() {
+  const includeLink = document.getElementById("shareIncludeLink")?.checked !== false;
+  const shareUrl = includeLink ? `\n\n${getShareUrl()}` : "";
+  const line =
+    latestPersonalizedContent?.identity?.[0]
+    || latestPersonalizedContent?.problems?.[0]
+    || currentContent.heroSubtitle;
+
+  if (currentLanguage === "en") {
+    return `I just got my Norys result and I am the ${currentContent.typeName}. The line that hit me most was: "${line}"${shareUrl}`;
+  }
+
+  return `Ich habe gerade mein Norys Ergebnis bekommen und ich bin die ${currentContent.typeName}. Am meisten hat mich dieser Satz getroffen: "${line}"${shareUrl}`;
+}
+
+function getShareImageStyles() {
+  return {
+    warm: {
+      background: "#f6dfcf",
+      card: "#fff8f2",
+      footer: "#f1d2bc",
+      text: "#111111",
+      accent: "#b95d18",
+      soft: "rgba(185,93,24,0.12)",
+    },
+    contrast: {
+      background: "#1f1712",
+      card: "#f3e1d0",
+      footer: "#e6c6a7",
+      text: "#111111",
+      accent: "#b95d18",
+      soft: "rgba(255,255,255,0.08)",
+    },
+    light: {
+      background: "#f7efe6",
+      card: "#ffffff",
+      footer: "#efe2d4",
+      text: "#111111",
+      accent: "#d37a37",
+      soft: "rgba(17,17,17,0.05)",
+    },
+  };
+}
+
+function wrapCanvasText(context, text, maxWidth) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+    if (context.measureText(nextLine).width <= maxWidth) {
+      currentLine = nextLine;
+      return;
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+    currentLine = word;
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+function drawRoundedRect(context, x, y, width, height, radius) {
+  context.beginPath();
+  context.moveTo(x + radius, y);
+  context.lineTo(x + width - radius, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + radius);
+  context.lineTo(x + width, y + height - radius);
+  context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  context.lineTo(x + radius, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - radius);
+  context.lineTo(x, y + radius);
+  context.quadraticCurveTo(x, y, x + radius, y);
+  context.closePath();
+}
+
+function renderShareImage() {
+  const canvas = document.getElementById("shareImageCanvas");
+  if (!canvas) {
+    return;
+  }
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return;
+  }
+
+  const styles = getShareImageStyles();
+  const style = styles[currentShareStyle] || styles.warm;
+  const ui = getUiText();
+  const ratios = {
+    "1:1": {
+      width: 1080,
+      height: 1080,
+      titleSize: 72,
+      titleLimit: 2,
+      bodySize: 32,
+      bulletCount: 2,
+      bulletLinesMax: 1,
+      bulletCardHeight: 166,
+      footerHeight: 84,
+    },
+    "3:4": {
+      width: 1080,
+      height: 1440,
+      titleSize: 86,
+      titleLimit: 3,
+      bodySize: 38,
+      bulletCount: 3,
+      bulletLinesMax: 2,
+      bulletCardHeight: 240,
+      footerHeight: 92,
+    },
+    "9:16": {
+      width: 1080,
+      height: 1920,
+      titleSize: 94,
+      titleLimit: 3,
+      bodySize: 40,
+      bulletCount: 3,
+      bulletLinesMax: 2,
+      bulletCardHeight: 296,
+      footerHeight: 98,
+    },
+  };
+  const ratio = ratios[currentShareRatio] || ratios["3:4"];
+
+  if (canvas.width !== ratio.width || canvas.height !== ratio.height) {
+    canvas.width = ratio.width;
+    canvas.height = ratio.height;
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = style.background;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.fillStyle = style.soft;
+  context.beginPath();
+  context.arc(170, 170, 140, 0, Math.PI * 2);
+  context.fill();
+
+  context.beginPath();
+  context.arc(canvas.width - 170, canvas.height - 190, 190, 0, Math.PI * 2);
+  context.fill();
+
+  drawRoundedRect(context, 78, 84, canvas.width - 156, canvas.height - 168, 42);
+  context.fillStyle = style.card;
+  context.fill();
+
+  context.fillStyle = style.accent;
+  context.beginPath();
+  context.arc(168, 168, 42, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = style.card;
+  context.font = '700 34px "Montserrat", sans-serif';
+  context.textAlign = "center";
+  context.fillText("N", 168, 180);
+
+  context.fillStyle = style.accent;
+  context.font = '700 34px "Montserrat", sans-serif';
+  context.textAlign = "left";
+  context.fillText("Norys", 240, 180);
+
+  context.fillStyle = style.text;
+  context.font = `500 ${ratio.titleSize}px "Hagrid Trial", "Montserrat", sans-serif`;
+  const titleLines = wrapCanvasText(
+    context,
+    currentLanguage === "en" ? `I am the ${currentContent.typeName}` : `Ich bin die ${currentContent.typeName}`,
+    canvas.width - 260,
+  );
+
+  let y = currentShareRatio === "1:1" ? 328 : currentShareRatio === "9:16" ? 388 : 360;
+  titleLines.slice(0, ratio.titleLimit).forEach((line) => {
+    context.fillText(line, 132, y);
+    y += ratio.titleSize + 8;
+  });
+
+  context.fillStyle = style.text;
+  context.font = `500 ${ratio.bodySize}px "Montserrat", sans-serif`;
+  const bodyText =
+    currentLanguage === "en"
+      ? "That result hit closer than I expected."
+      : "Dieses Ergebnis hat mich überraschend genau getroffen.";
+  const bodyLines = wrapCanvasText(context, bodyText, canvas.width - 260);
+  y += currentShareRatio === "1:1" ? 18 : 26;
+  bodyLines.slice(0, currentShareRatio === "1:1" ? 2 : 3).forEach((line) => {
+    context.fillText(line, 132, y);
+    y += ratio.bodySize + 14;
+  });
+
+  const bulletSource = [
+    ...(latestPersonalizedContent?.identity || []),
+    ...(latestPersonalizedContent?.problems || []),
+  ].slice(0, ratio.bulletCount);
+
+  const footerOuterHeight = ratio.footerHeight;
+  const bulletTitle =
+    currentLanguage === "en" ? "What fits me most:" : "Was am meisten zu mir passt:";
+  const bulletCardY = Math.min(canvas.height - (ratio.bulletCardHeight + footerOuterHeight + 112), y + 34);
+  const bulletCardWidth = canvas.width - 264;
+  const bulletTextWidth = bulletCardWidth - 82;
+  const bulletBaseTop = currentShareRatio === "1:1" ? 90 : 102;
+  const bulletSpacingSingle = 52;
+  const bulletSpacingDouble = 74;
+
+  context.font = '500 27px "Montserrat", sans-serif';
+  const measuredBullets = bulletSource.map((item) => {
+    const bulletLines = wrapCanvasText(context, item, bulletTextWidth).slice(0, ratio.bulletLinesMax);
+    return {
+      item,
+      lines: bulletLines,
+      blockHeight: bulletLines.length > 1 ? bulletSpacingDouble : bulletSpacingSingle,
+    };
+  });
+
+  const measuredBulletHeight = measuredBullets.reduce((sum, bullet) => sum + bullet.blockHeight, 0);
+  const desiredBulletHeight = bulletBaseTop + measuredBulletHeight + 18;
+  const bulletCardHeight = Math.min(
+    Math.max(desiredBulletHeight, 150),
+    Math.max(150, canvas.height - bulletCardY - (footerOuterHeight + 92)),
+  );
+
+  drawRoundedRect(context, 132, bulletCardY, canvas.width - 264, bulletCardHeight, 30);
+  context.fillStyle = style.soft;
+  context.fill();
+
+  context.fillStyle = style.text;
+  context.font = '600 28px "Montserrat", sans-serif';
+  context.fillText(bulletTitle, 176, bulletCardY + 52);
+
+  context.font = '500 27px "Montserrat", sans-serif';
+  let bulletY = bulletCardY + bulletBaseTop;
+  measuredBullets.forEach(({ lines, blockHeight }) => {
+    context.fillStyle = style.accent;
+    context.beginPath();
+    context.arc(190, bulletY - 10, 6, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = style.text;
+    lines.forEach((line, index) => {
+      context.fillText(line, 214, bulletY + index * 34);
+    });
+    bulletY += blockHeight;
+  });
+
+  drawRoundedRect(context, 132, canvas.height - (footerOuterHeight + 48), canvas.width - 264, footerOuterHeight, 28);
+  context.fillStyle = style.footer;
+  context.fill();
+
+  context.textAlign = "center";
+  context.fillStyle = style.text;
+  context.font = '500 28px "Montserrat", sans-serif';
+  context.fillText("noryspsychologie.de", canvas.width / 2, canvas.height - ((footerOuterHeight + 48) / 2) - 2);
+  context.textAlign = "left";
+}
+
+function setShareStatus(message) {
+  const statusNode = document.getElementById("shareStatus");
+  if (statusNode) {
+    statusNode.textContent = message || "";
+  }
+}
+
+function switchShareMode(mode) {
+  const textButton = document.getElementById("shareModeText");
+  const imageButton = document.getElementById("shareModeImage");
+  const textPanel = document.getElementById("shareTextPanel");
+  const imagePanel = document.getElementById("shareImagePanel");
+  const isImage = mode === "image";
+
+  textButton?.classList.toggle("is-active", !isImage);
+  imageButton?.classList.toggle("is-active", isImage);
+  textPanel?.classList.toggle("is-active", !isImage);
+  imagePanel?.classList.toggle("is-active", isImage);
+
+  if (isImage) {
+    renderShareImage();
+  }
+}
+
+function openShareModal() {
+  const modal = document.getElementById("shareResultDialog");
+  if (!modal) {
+    return;
+  }
+
+  modal.hidden = false;
+  switchShareMode("text");
+  const previewNode = document.getElementById("shareTextPreview");
+  if (previewNode) {
+    previewNode.textContent = getShareText();
+  }
+  renderShareImage();
+  setShareStatus("");
+}
+
+function closeShareModal() {
+  const modal = document.getElementById("shareResultDialog");
+  if (modal) {
+    modal.hidden = true;
+  }
+}
+
+async function shareTextContent() {
+  const ui = getUiText();
+  const sharePayload = {
+    title: document.title,
+    text: getShareText(),
+  };
+
+  if (navigator.share) {
+    await navigator.share(sharePayload);
+    return;
+  }
+
+  await navigator.clipboard.writeText(sharePayload.text);
+  setShareStatus(ui.shareTextCopied);
+}
+
+async function shareImageContent() {
+  const canvas = document.getElementById("shareImageCanvas");
+  const ui = getUiText();
+
+  if (!canvas) {
+    return;
+  }
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) {
+    return;
+  }
+
+  const file = new File([blob], "norys-ergebnis.png", { type: "image/png" });
+  if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+    await navigator.share({
+      files: [file],
+      title: document.title,
+      text: getShareText(),
+    });
+    return;
+  }
+
+  const fileUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = fileUrl;
+  link.download = "norys-ergebnis.png";
+  link.click();
+  URL.revokeObjectURL(fileUrl);
+  setShareStatus(ui.shareImageDownloaded);
+}
+
+async function downloadShareImage() {
+  const canvas = document.getElementById("shareImageCanvas");
+  if (!canvas) {
+    return;
+  }
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) {
+    return;
+  }
+
+  const fileUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = fileUrl;
+  link.download = "norys-ergebnis.png";
+  link.click();
+  URL.revokeObjectURL(fileUrl);
+  setShareStatus(getUiText().shareImageDownloaded);
+}
+
 function handleLanguageToggle() {
   currentLanguage = currentLanguage === "en" ? "de" : "en";
 
@@ -629,6 +1061,8 @@ function applyLanguage() {
   const brandLink = document.getElementById("brandLink");
   const languageToggle = document.getElementById("languageToggle");
   const languageLabel = document.getElementById("languageLabel");
+  const shareTrigger = document.getElementById("shareResultButton");
+  const shareModalClose = document.getElementById("shareModalClose");
 
   document.documentElement.lang = currentLanguage;
   document.title = ui.pageTitle;
@@ -644,6 +1078,8 @@ function applyLanguage() {
     languageToggle.setAttribute("aria-pressed", String(currentLanguage === "en"));
   }
   if (languageLabel) languageLabel.textContent = ui.languageLabel;
+  if (shareTrigger) shareTrigger.setAttribute("aria-label", ui.shareButtonAria);
+  if (shareModalClose) shareModalClose.setAttribute("aria-label", ui.shareCloseAria);
 
   setText("resultHeroPrefix", ui.heroPrefix);
   setText("identityHeading", ui.identityHeading);
@@ -656,10 +1092,38 @@ function applyLanguage() {
   setText("offerDeadlineLabel", ui.offerDeadlineLabel);
   setText("offerCtaText", ui.offerCtaText);
   setText("testimonialsHeading", ui.testimonialsHeading);
+  setText("shareModalEyebrow", ui.shareModalEyebrow);
+  setText("shareModalTitle", ui.shareModalTitle);
+  setText("shareModalCopy", ui.shareModalCopy);
+  setText("shareModeText", ui.shareTextMode);
+  setText("shareModeImage", ui.shareImageMode);
+  setText("shareTextPreviewLabel", ui.shareTextPreviewLabel);
+  setText("shareIncludeLinkLabel", ui.shareIncludeLinkLabel);
+  setText("shareRatioLabel", ui.shareRatioLabel);
+  setText("shareTextActionLabel", ui.shareTextAction);
+  setText("copyTextAction", ui.shareCopyAction);
+  setText("shareStyleLabel", ui.shareStyleLabel);
+  setText("shareImageActionLabel", ui.shareImageAction);
+  setText("downloadImageAction", ui.shareDownloadAction);
+
+  document
+    .querySelectorAll("[data-share-style]")
+    .forEach((button) => {
+      const styleKey = button.getAttribute("data-share-style");
+      if (styleKey === "warm") button.textContent = ui.shareStyleWarm;
+      if (styleKey === "contrast") button.textContent = ui.shareStyleContrast;
+      if (styleKey === "light") button.textContent = ui.shareStyleLight;
+    });
+
+  const previewNode = document.getElementById("shareTextPreview");
+  if (previewNode) {
+    previewNode.textContent = getShareText();
+  }
 }
 
 function hydratePage() {
   const personalizedContent = buildPersonalizedContent(result, currentContent);
+  latestPersonalizedContent = personalizedContent;
 
   setText("resultTypeName", currentContent.typeName);
   setText("resultHeroSubtitle", personalizedContent.heroSubtitle);
@@ -672,6 +1136,7 @@ function hydratePage() {
   renderSimpleList("futureGainList", personalizedContent.futureGain);
   renderOutcomes();
   renderTestimonials();
+  renderShareImage();
   initOfferCountdown();
 }
 
@@ -975,9 +1440,105 @@ function getOfferDeadlineAt() {
   }
 }
 
+function initShareFlow() {
+  const shareTrigger = document.getElementById("shareResultButton");
+  const shareModal = document.getElementById("shareResultDialog");
+  const shareClose = document.getElementById("shareModalClose");
+  const shareTextMode = document.getElementById("shareModeText");
+  const shareImageMode = document.getElementById("shareModeImage");
+  const shareIncludeLink = document.getElementById("shareIncludeLink");
+  const shareTextAction = document.getElementById("shareTextAction");
+  const copyTextAction = document.getElementById("copyTextAction");
+  const shareImageAction = document.getElementById("shareImageAction");
+  const downloadImageAction = document.getElementById("downloadImageAction");
+
+  if (!shareTrigger || !shareModal) {
+    return;
+  }
+
+  shareTrigger.addEventListener("click", openShareModal);
+  shareClose?.addEventListener("click", closeShareModal);
+  shareModal.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.dataset.shareClose === "true") {
+      closeShareModal();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !shareModal.hidden) {
+      closeShareModal();
+    }
+  });
+
+  shareTextMode?.addEventListener("click", () => switchShareMode("text"));
+  shareImageMode?.addEventListener("click", () => switchShareMode("image"));
+
+  document.querySelectorAll("[data-share-style]").forEach((button) => {
+    button.addEventListener("click", () => {
+      currentShareStyle = button.getAttribute("data-share-style") || "warm";
+      document.querySelectorAll("[data-share-style]").forEach((node) => {
+        node.classList.toggle("is-active", node === button);
+      });
+      renderShareImage();
+    });
+  });
+
+  document.querySelectorAll("[data-share-ratio]").forEach((button) => {
+    button.addEventListener("click", () => {
+      currentShareRatio = button.getAttribute("data-share-ratio") || "3:4";
+      document.querySelectorAll("[data-share-ratio]").forEach((node) => {
+        node.classList.toggle("is-active", node === button);
+      });
+      renderShareImage();
+    });
+  });
+
+  shareIncludeLink?.addEventListener("change", () => {
+    const previewNode = document.getElementById("shareTextPreview");
+    if (previewNode) {
+      previewNode.textContent = getShareText();
+    }
+  });
+
+  shareTextAction?.addEventListener("click", async () => {
+    try {
+      await shareTextContent();
+    } catch (_error) {
+      setShareStatus(getUiText().shareNotSupported);
+    }
+  });
+
+  copyTextAction?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(getShareText());
+      setShareStatus(getUiText().shareTextCopied);
+    } catch (_error) {
+      setShareStatus(getUiText().shareNotSupported);
+    }
+  });
+
+  shareImageAction?.addEventListener("click", async () => {
+    try {
+      await shareImageContent();
+    } catch (_error) {
+      setShareStatus(getUiText().shareNotSupported);
+    }
+  });
+
+  downloadImageAction?.addEventListener("click", async () => {
+    try {
+      await downloadShareImage();
+    } catch (_error) {
+      setShareStatus(getUiText().shareNotSupported);
+    }
+  });
+}
+
 applyLanguage();
 hydratePage();
 initScrollAnimations();
+initShareFlow();
 
 const languageToggle = document.getElementById("languageToggle");
 if (languageToggle) {
