@@ -7,7 +7,7 @@
   const STORAGE_DISMISSED_KEY = "norysNewsletterDismissedAt";
   const STORAGE_SUBSCRIBED_KEY = "norysNewsletterSubscribed";
   const DISMISS_TTL_MS = 3 * 24 * 60 * 60 * 1000;
-  const OPEN_DELAY_MS = 60 * 1000;
+  const RESULT_OPEN_DELAY_MS = 8 * 1000;
   const LANGUAGE_STORAGE_KEY = "norysLanguage";
 
   const ui = {
@@ -47,6 +47,11 @@
   const status = document.getElementById("newsletterStatus");
   const submitLabel = document.getElementById("newsletterSubmitLabel");
   let openTimer = null;
+
+  function isResultPage() {
+    const pathname = window.location.pathname || "";
+    return pathname.endsWith("/result.html") || pathname === "/result.html";
+  }
 
   function getLanguage() {
     try {
@@ -193,8 +198,8 @@
   window.addEventListener("norys:language-change", applyLanguage);
   applyLanguage();
 
-  if (shouldOpen()) {
-    openTimer = window.setTimeout(openModal, OPEN_DELAY_MS);
+  if (shouldOpen() && isResultPage()) {
+    openTimer = window.setTimeout(openModal, RESULT_OPEN_DELAY_MS);
   }
 
   window.addEventListener("beforeunload", () => {
