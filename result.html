@@ -280,9 +280,39 @@
       </div>
     </div>
 
+    <div class="newsletter-modal" id="newsletterModal" hidden>
+      <div class="newsletter-modal__backdrop" data-newsletter-close="true"></div>
+      <div class="newsletter-modal__panel" role="dialog" aria-modal="true" aria-labelledby="newsletterTitle">
+        <div class="newsletter-modal__header">
+          <div>
+            <p class="newsletter-modal__eyebrow" id="newsletterEyebrow">Nichts verpassen</p>
+            <h2 class="newsletter-modal__title" id="newsletterTitle">Hol dir neue psychologische Einblicke direkt per E-Mail</h2>
+          </div>
+          <button class="newsletter-modal__close" id="newsletterClose" type="button" aria-label="Schließen">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+        </div>
+        <p class="newsletter-modal__copy" id="newsletterCopy">
+          Trag dich ein und wir schicken dir neue Impulse zu Beziehungsmustern, Triggern und emotionaler Klarheit.
+        </p>
+        <form class="newsletter-form" id="newsletterForm">
+          <input class="newsletter-form__input" id="newsletterEmail" type="email" inputmode="email" autocomplete="email" placeholder="Deine E-Mail-Adresse" required />
+          <button class="cta newsletter-form__submit" id="newsletterSubmit" type="submit">
+            <span id="newsletterSubmitLabel">Kostenlos eintragen</span>
+            <span class="cta__arrow" aria-hidden="true">
+              <i class="fa-solid fa-arrow-right-long"></i>
+            </span>
+          </button>
+        </form>
+        <p class="newsletter-form__disclaimer" id="newsletterDisclaimer">Du kannst dich jederzeit wieder abmelden.</p>
+        <p class="newsletter-modal__status" id="newsletterStatus" aria-live="polite"></p>
+      </div>
+    </div>
+
     <script src="assets/result-content.js?v=20260330c"></script>
     <script src="assets/tracker.js"></script>
     <script src="result.js?v=20260407a"></script>
     <script src="assets/script.js?v=20260330b"></script>
+    <script src="assets/newsletter-popup.js?v=20260407a"></script>
   </body>
 </html>

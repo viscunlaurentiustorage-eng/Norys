@@ -783,3 +783,122 @@ body{
     line-height: .98;
   }
 }
+
+.newsletter-modal{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  display:grid;
+  place-items:center;
+  padding:18px;
+}
+
+.newsletter-modal[hidden]{
+  display:none;
+}
+
+.newsletter-modal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(17,17,17,.38);
+  backdrop-filter:blur(4px);
+}
+
+.newsletter-modal__panel{
+  position:relative;
+  width:min(100%, 560px);
+  border:1px solid rgba(17,17,17,.08);
+  border-radius:28px;
+  background:#f7efe6;
+  padding:22px;
+  display:grid;
+  gap:16px;
+}
+
+.newsletter-modal__header{
+  display:flex;
+  align-items:start;
+  justify-content:space-between;
+  gap:18px;
+}
+
+.newsletter-modal__eyebrow{
+  margin:0 0 8px;
+  color:rgba(17,17,17,.54);
+  font-size:.84rem;
+  font-weight:700;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+.newsletter-modal__title{
+  margin:0;
+  font-family:"Hagrid Trial","Montserrat",sans-serif;
+  font-size:clamp(1.5rem, 3vw, 2.1rem);
+  line-height:1.04;
+}
+
+.newsletter-modal__copy,
+.newsletter-modal__status{
+  margin:0;
+  color:rgba(17,17,17,.74);
+  line-height:1.58;
+}
+
+.newsletter-modal__close{
+  width:42px;
+  height:42px;
+  border:1px solid rgba(17,17,17,.08);
+  border-radius:999px;
+  background:rgba(255,255,255,.7);
+  color:var(--accent);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  flex-shrink:0;
+}
+
+.newsletter-form{
+  display:grid;
+  gap:12px;
+}
+
+.newsletter-form__input{
+  width:100%;
+  min-height:52px;
+  border:1px solid rgba(17,17,17,.12);
+  border-radius:18px;
+  background:rgba(255,255,255,.76);
+  padding:0 16px;
+  font:inherit;
+  color:#111;
+}
+
+.newsletter-form__input::placeholder{
+  color:rgba(17,17,17,.46);
+}
+
+.newsletter-form__submit{
+  justify-content:center;
+}
+
+.newsletter-form__disclaimer{
+  margin:0;
+  color:rgba(17,17,17,.58);
+  font-size:.84rem;
+  line-height:1.5;
+}
+
+.newsletter-modal__close:focus-visible,
+.newsletter-form__input:focus-visible{
+  outline:2px solid rgba(185,93,24,.34);
+  outline-offset:3px;
+}
+
+@media (max-width: 640px){
+  .newsletter-modal__panel{
+    border-radius:22px;
+    padding:18px;
+  }
+}

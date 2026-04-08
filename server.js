@@ -20,6 +20,7 @@ const paypalApiBase =
   paypalEnv === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
 const brevoApiKey = process.env.BREVO_API_KEY || "";
 const brevoListId = Number(process.env.BREVO_LIST_ID || 0);
+const brevoNewsletterListId = Number(process.env.BREVO_NEWSLETTER_LIST_ID || 0);
 const emailDownloadSecret =
   process.env.EMAIL_DOWNLOAD_SECRET || stripeSecretKey || paypalClientSecret || "norys-change-this-download-secret";
 
@@ -375,6 +376,10 @@ async function brevoRequest(pathname, payload) {
   return data;
 }
 
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
 async function syncPaidOrderToBrevo({
   email,
   productName,
@@ -403,6 +408,20 @@ async function syncPaidOrderToBrevo({
   }
 
   await brevoRequest("/contacts", contactPayload);
+}
+
+async function syncNewsletterContactToBrevo(email) {
+  if (!brevoNewsletterListId) {
+    throw new Error("Brevo newsletter list is not configured. Add BREVO_NEWSLETTER_LIST_ID to your environment.");
+  }
+
+  await brevoRequest("/contacts", {
+    email,
+    emailBlacklisted: false,
+    smsBlacklisted: false,
+    updateEnabled: true,
+    listIds: [brevoNewsletterListId],
+  });
 }
 
 async function fulfillPaidOrder(_request, payload) {
@@ -517,6 +536,25 @@ app.get("/api/paypal-config", (_request, response) => {
     clientId: paypalClientId,
     env: paypalEnv,
   });
+});
+
+app.post("/api/newsletter-signup", async (request, response) => {
+  try {
+    const email = String(request.body?.email || "").trim().toLowerCase();
+
+    if (!isValidEmail(email)) {
+      response.status(400).json({ error: "Please enter a valid email address." });
+      return;
+    }
+
+    await syncNewsletterContactToBrevo(email);
+    response.json({ ok: true });
+  } catch (error) {
+    console.error("Brevo newsletter signup failed:", error);
+    response.status(500).json({
+      error: error instanceof Error ? error.message : "Newsletter signup could not be completed.",
+    });
+  }
 });
 
 app.post("/api/create-checkout-session", async (request, response) => {

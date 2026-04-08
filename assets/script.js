@@ -270,12 +270,15 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    applyHomeLanguage(getInitialLanguage());
+    const initialLanguage = getInitialLanguage();
+    applyHomeLanguage(initialLanguage);
+    window.dispatchEvent(new CustomEvent("norys:language-change", { detail: { language: initialLanguage } }));
 
     languageToggle.addEventListener("click", () => {
       const nextLanguage = languageToggle.dataset.language === "en" ? "de" : "en";
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
       applyHomeLanguage(nextLanguage);
+      window.dispatchEvent(new CustomEvent("norys:language-change", { detail: { language: nextLanguage } }));
     });
   };
 

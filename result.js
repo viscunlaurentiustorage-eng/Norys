@@ -1049,6 +1049,7 @@ function handleLanguageToggle() {
   currentContent = getCurrentContent();
   applyLanguage();
   hydratePage();
+  window.dispatchEvent(new CustomEvent("norys:language-change", { detail: { language: currentLanguage } }));
 }
 
 function applyLanguage() {
@@ -1539,6 +1540,7 @@ applyLanguage();
 hydratePage();
 initScrollAnimations();
 initShareFlow();
+window.dispatchEvent(new CustomEvent("norys:language-change", { detail: { language: currentLanguage } }));
 
 const languageToggle = document.getElementById("languageToggle");
 if (languageToggle) {
